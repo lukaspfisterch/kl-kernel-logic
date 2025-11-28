@@ -118,6 +118,7 @@ The Python reference implementation lives under `src/kl_kernel_logic` and provid
 - CAEL execution layer with policies and tracing
 - Kernel binder that unifies Psi and CAEL
 - Example operations under `src/kl_kernel_logic/examples/`
+- Foundational deterministic examples under `src/kl_kernel_logic/examples_foundations/`
 
 A minimal test suite is included in `tests/`.
 
@@ -144,14 +145,19 @@ pytest
 This repository includes deterministic examples called foundational operations.
 They act as base operations before any higher level orchestrator is introduced.
 
-- Current shipped example: `src/kl_kernel_logic/examples/text_simplify.py`
-- Planned foundational set (see [docs/02-foundational-operations.md](docs/02-foundational-operations.md)) to live under `src/kl_kernel_logic/examples_foundations/`
+- Current shipped examples:
+  - `src/kl_kernel_logic/examples/text_simplify.py`
+  - `src/kl_kernel_logic/examples_foundations/solve_poisson_1d`
+  - `src/kl_kernel_logic/examples_foundations/integrate_trajectory_1d`
+  - `src/kl_kernel_logic/examples_foundations/smooth_measurements`
 
 Each foundational example defines:
 
 - a `PsiDefinition` with operation type, logical binding, effect class, constraints  
 - an `ExecutionPolicy` with realistic boundaries  
 - a Kernel run that returns a bundled `{ psi, execution }` record, including trace and audit events
+
+See [docs/02-foundational-operations.md](docs/02-foundational-operations.md) for sequence diagrams and detailed flows.
 
 ---
 

@@ -48,12 +48,16 @@ class CAELExecutor:
         The task receives only the functional parameters.
         Control flags like needs_network are handled by CAEL.
         """
+        # Reset trace per execution to avoid leaking entries across runs.
+        self.trace_log = []
         self._trace("start", ctx, kwargs)
 
         if not ctx.policy.allow_network and kwargs.get("needs_network"):
+            self._trace("error", ctx, {"error": "network access forbidden"})
             raise PermissionError("Operation requires network access but policy forbids it")
 
         if not ctx.policy.allow_filesystem and kwargs.get("needs_fs"):
+            self._trace("error", ctx, {"error": "filesystem access forbidden"})
             raise PermissionError("Operation requires filesystem access but policy forbids it")
 
         # Remove control flags before calling the task
@@ -63,7 +67,11 @@ class CAELExecutor:
             if key not in {"needs_network", "needs_fs"}
         }
 
-        result = task(**safe_kwargs)
+        try:
+            result = task(**safe_kwargs)
+        except Exception as exc:  # pragma: no cover - bubbled but traced
+            self._trace("error", ctx, {"error": type(exc).__name__})
+            raise
 
         self._trace("end", ctx, {"result_type": type(result).__name__})
         return {"result": result, "trace": list(self.trace_log)}

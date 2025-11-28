@@ -2,6 +2,9 @@
 
 The foundational operations show how KL can describe and control deterministic computational steps before any broader orchestrator is built.
 
+This document extends the concepts from the main README by providing concrete foundational operations used to exercise Psi, CAEL and the Kernel.
+
+
 We use three examples:
 
 1. `solve_poisson_1d` on a discrete grid  

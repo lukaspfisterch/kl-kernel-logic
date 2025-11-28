@@ -1,7 +1,7 @@
 """
 Deterministic foundational operations used to exercise KL end-to-end.
 
-These are intentionally simple: numeric placeholders that focus on
+These are intentionally simple numeric placeholders that emphasise
 structure, policy checks, and traceability rather than performance.
 """
 
@@ -19,6 +19,8 @@ class Grid1D:
             raise ValueError("Grid spacing must be positive")
         if len(self.values) < 3:
             raise ValueError("Grid must contain at least 3 points")
+        if len(self.values) > 4096:
+            raise ValueError("Grid length must be <= 4096")
 
     @property
     def length(self) -> int:
@@ -27,33 +29,36 @@ class Grid1D:
 
 def solve_poisson_1d(rho: Grid1D) -> Grid1D:
     """
-    Solve d²phi/dx² = rho with Dirichlet boundary conditions (phi[0]=phi[-1]=0)
-    using a simple tridiagonal solver. This is a deterministic stand-in for
-    a real numeric kernel.
+    Solve d2phi/dx2 = rho with Dirichlet boundaries phi[0] = phi[-1] = 0.
+
+    Uses a tridiagonal solve (Thomas algorithm) over the interior nodes.
+    Deterministic and intended for small grids where transparency matters
+    more than performance.
     """
-    n = rho.length
-    dx = rho.spacing
+    interior_count = rho.length - 2
+    if interior_count < 1:
+        raise ValueError("Grid must contain interior points")
 
-    # Tridiagonal coefficients for interior points
-    a = [-1.0] * (n - 2)
-    b = [2.0] * (n - 1)
-    c = [-1.0] * (n - 2)
-    d = [r * dx * dx for r in rho.values[1:-1]]
+    dx2 = rho.spacing * rho.spacing
+    a = [-1.0] * (interior_count - 1)
+    b = [2.0] * interior_count
+    c = [-1.0] * (interior_count - 1)
+    d = [value * dx2 for value in rho.values[1:-1]]
 
-    # Thomas algorithm (forward elimination)
-    for i in range(1, n - 1):
-        m = a[i - 1] / b[i - 1]
-        b[i] = b[i] - m * c[i - 1]
-        d[i] = d[i] - m * d[i - 1]
+    # Forward elimination
+    for i in range(1, interior_count):
+        factor = a[i - 1] / b[i - 1]
+        b[i] -= factor * c[i - 1]
+        d[i] -= factor * d[i - 1]
 
     # Back substitution
-    phi_internal = [0.0] * (n - 2)
+    phi_internal = [0.0] * interior_count
     phi_internal[-1] = d[-1] / b[-1]
-    for i in range(n - 3, -1, -1):
+    for i in range(interior_count - 2, -1, -1):
         phi_internal[i] = (d[i] - c[i] * phi_internal[i + 1]) / b[i]
 
     phi = [0.0] + phi_internal + [0.0]
-    return Grid1D(values=phi, spacing=dx)
+    return Grid1D(values=phi, spacing=rho.spacing)
 
 
 def integrate_trajectory_1d(
@@ -66,7 +71,7 @@ def integrate_trajectory_1d(
 ) -> List[float]:
     """
     Integrate position over discrete steps under constant force.
-    Returns the list of positions (including initial).
+    Returns the list of positions (including the initial position).
     """
     if dt <= 0:
         raise ValueError("dt must be positive")
@@ -75,36 +80,34 @@ def integrate_trajectory_1d(
     if mass == 0:
         raise ValueError("mass must be non-zero")
 
-    x = x0
-    v = v0
-    positions = [x]
-    a = force / mass
+    positions = [x0]
+    acceleration = force / mass
+    velocity = v0
+    position = x0
 
     for _ in range(steps):
-        v += a * dt
-        x += v * dt
-        positions.append(x)
+        velocity += acceleration * dt
+        position += velocity * dt
+        positions.append(position)
 
     return positions
 
 
-def smooth_measurements(values: Iterable[float], window: int = 3) -> List[float]:
+def smooth_measurements(values: Iterable[float]) -> List[float]:
     """
-    Apply a simple moving average with the specified window (>=1).
-    Edges use the available values (no padding).
+    Apply a fixed three point moving average.
+    Edges use the available values without padding.
     """
     vals = list(values)
-    if window < 1:
-        raise ValueError("window must be >= 1")
     if not vals:
         return []
+    if len(vals) > 10_000:
+        raise ValueError("Series length must be <= 10_000")
 
-    half = window // 2
     smoothed: List[float] = []
-
     for i in range(len(vals)):
-        start = max(0, i - half)
-        end = min(len(vals), i + half + 1)
+        start = max(0, i - 1)
+        end = min(len(vals), i + 2)
         window_vals = vals[start:end]
         smoothed.append(sum(window_vals) / len(window_vals))
 

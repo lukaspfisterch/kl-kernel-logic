@@ -28,7 +28,11 @@ def run_poisson_example() -> dict:
         operation_type=OperationType.TRANSFORM,
         logical_binding="foundations.numerics.poisson_1d",
         effect_class=EffectClass.NON_STATE_CHANGING,
-        constraints="Input: 1D grid <=4096; deterministic; Dirichlet BC.",
+        constraints=(
+            "Input: 1D scalar grid. "
+            "Output: 1D scalar grid. "
+            "Deterministic. Grid length <= 4096."
+        ),
     )
     policy = ExecutionPolicy(
         allow_network=False,
@@ -41,7 +45,7 @@ def run_poisson_example() -> dict:
         policy=policy,
     )
 
-    rho_grid = Grid1D(values=[0.0, 1.0, 0.0, -1.0, 0.0], spacing=0.1)
+    rho_grid = Grid1D(values=[0.0, 1.0, 0.0], spacing=0.1)
     kernel = Kernel()
     return kernel.execute(
         psi=psi,
@@ -56,7 +60,11 @@ def run_trajectory_example() -> dict:
         operation_type=OperationType.TRANSFORM,
         logical_binding="foundations.mechanics.trajectory_1d",
         effect_class=EffectClass.NON_STATE_CHANGING,
-        constraints="Input: x0, v0, dt, steps, force, mass; deterministic.",
+        constraints=(
+            "Input: initial position and velocity, force, mass, time step and step count. "
+            "Output: sequence of positions over time. "
+            "Deterministic for given parameters."
+        ),
     )
     policy = ExecutionPolicy(
         allow_network=False,
@@ -76,7 +84,7 @@ def run_trajectory_example() -> dict:
         x0=0.0,
         v0=0.0,
         dt=0.01,
-        steps=5,
+        steps=100,
         force=1.0,
         mass=1.0,
     )
@@ -87,7 +95,11 @@ def run_smoothing_example() -> dict:
         operation_type=OperationType.TRANSFORM,
         logical_binding="foundations.signals.smoothing",
         effect_class=EffectClass.NON_STATE_CHANGING,
-        constraints="Input: scalar series length <=10_000; deterministic moving average.",
+        constraints=(
+            "Input: 1D scalar series, length <= 10_000. "
+            "Output: 1D scalar series of the same length. "
+            "Deterministic three point moving average."
+        ),
     )
     policy = ExecutionPolicy(
         allow_network=False,

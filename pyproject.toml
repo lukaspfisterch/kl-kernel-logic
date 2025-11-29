@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kl-kernel-logic"
+version = "0.3.0"
+description = "KL Kernel Logic foundations: Psi, CAEL, Kernel and deterministic examples."
+authors = [
+  { name = "Lukas Pfister", email = "228201683+lukaspfisterch@users.noreply.github.com" }
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = []
+keywords = ["kernel", "execution", "policy", "audit", "governance", "deterministic", "traceability"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: System :: Monitoring",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov"]
+
+[project.urls]
+Homepage = "https://github.com/lukaspfisterch/kl-kernel-logic"
+Repository = "https://github.com/lukaspfisterch/kl-kernel-logic"
+Issues = "https://github.com/lukaspfisterch/kl-kernel-logic/issues"
+Changelog = "https://github.com/lukaspfisterch/kl-kernel-logic/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+where = ["src"]

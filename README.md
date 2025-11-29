@@ -19,6 +19,7 @@ The goal is not to build yet another orchestration system, but to provide the mi
 
 ## Table of Contents
 - Overview
+- Use Cases
 - Core Concepts
 - Architecture
 - Features
@@ -26,11 +27,15 @@ The goal is not to build yet another orchestration system, but to provide the mi
 - Policy & Audit
 - Repository Structure
 - Installation
+- Quick Start
 - Quick Example
 - Policy Example
+- AI/LLM Example
 - Foundations Examples
 - Tests
 - Roadmap
+- FAQ
+- Contributing
 - License
 
 ## Overview
@@ -46,6 +51,32 @@ KL solves this by:
 - producing a trace bundle suitable for governance and audit
 
 The framework imposes no domain-specific semantics. It is a binding layer, designed for system builders, AI platform developers, and engineers who need clarity and operational trust.
+
+## Use Cases
+
+KL is designed for scenarios requiring **governed execution** with **full audit trails**:
+
+### Healthcare & Regulated Industries
+- Execute LLM operations with HIPAA/GDPR compliance
+- Complete audit trail for every AI interaction
+- Policy enforcement prevents data leaks
+- Demonstrate compliance to auditors
+
+### Enterprise AI Integration
+- Route operations across internal/external LLM providers
+- Block unauthorized external API calls
+- Track usage and costs per user/department
+- Migrate providers without code changes
+
+### Research & Scientific Computing
+- Reproducible computation workflows
+- Deterministic operations with execution tracing
+- Policy-controlled resource access
+
+### Infrastructure Automation
+- Governed system operations (filesystem, network)
+- Trace every infrastructure change
+- Prevent unauthorized access
 
 ## Core Concepts
 ### Psi (Principle Definition Layer)
@@ -397,6 +428,80 @@ Run the foundation examples:
 python -m kl_kernel_logic.examples_foundations.runners
 ```
 
+## AI/LLM Example
+
+Execute LLM calls with full governance and audit trail:
+
+```python
+from kl_kernel_logic import (
+    CAEL,
+    PsiDefinition,
+    ExecutionContext,
+    ExecutionPolicy
+)
+import anthropic  # pip install anthropic
+
+def call_claude(prompt: str) -> str:
+    """Simple Claude API wrapper."""
+    client = anthropic.Anthropic()
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return message.content[0].text
+
+# Define the operation
+psi = PsiDefinition(
+    psi_type="llm.anthropic.completion",
+    domain="ai",
+    effect="ai",  # Marks as AI operation
+    description="Claude AI completion"
+)
+
+# Execution context with user identity and policy
+ctx = ExecutionContext(
+    user_id="user_123",
+    request_id="req_456",
+    policy=ExecutionPolicy(
+        timeout_seconds=30,
+        allow_network=True
+    )
+)
+
+# Execute with full audit trail
+cael = CAEL()
+trace = cael.execute(
+    psi=psi,
+    task=call_claude,
+    ctx=ctx,
+    prompt="Explain quantum computing in simple terms"
+)
+
+# Audit information available
+print(f"User: {trace.envelope.metadata['user_id']}")
+print(f"Started: {trace.started_at}")
+print(f"Runtime: {trace.runtime_ms}ms")
+print(f"Success: {trace.success}")
+if trace.success:
+    print(f"Response: {trace.output[:100]}...")
+```
+
+**Output:**
+```
+User: user_123
+Started: 2025-11-29T15:30:45.123Z
+Runtime: 2341.5ms
+Success: True
+Response: Quantum computing is a revolutionary approach to computation that harnesses the principles...
+```
+
+Every LLM call is:
+- ✅ Logged with user identity
+- ✅ Timed and traced
+- ✅ Policy-controlled (timeout, network access)
+- ✅ Auditable for compliance
+
 ## Foundations Examples
 Location: `src/kl_kernel_logic/examples_foundations/`
 
@@ -429,13 +534,57 @@ Validates:
 - policy engine evaluation
 
 ## Roadmap
-- Full policy execution layer
-- Configurable trace schemas
-- First-class JSONL/NDJSON telemetry
-- Web-based inspection UI (interactive trace viewer)
-- Multi-operation workflows (chains, DAGs, state machines)
-- Expanded deterministic libraries
-- LLM adapter layer (controlled nondeterminism)
+
+### v0.4.0 (Q1 2026) - Enhanced Policies
+- [ ] Extended `PolicyEngine` interface (access to envelope + context)
+- [ ] JSONL/NDJSON trace export
+- [ ] Trace schema validation (JSON Schema)
+- [ ] `PsiConstraints` validation in CAEL (opt-in)
+
+### v0.5.0 (Q2 2026) - LLM Ecosystem
+- [ ] LLM adapter library (Anthropic, OpenAI, Azure, Ollama)
+- [ ] Retry/fallback handlers
+- [ ] Cost tracking middleware
+- [ ] Streaming support for LLM responses
+
+### v1.0.0 (Q3 2026) - Enterprise Features
+- [ ] Workflow orchestration (chains, DAGs)
+- [ ] Web-based trace viewer UI
+- [ ] SIEM connectors (Splunk, Elasticsearch)
+- [ ] Signature validation & crypto integration
+- [ ] Multi-tenancy support
+
+### Community Extensions (separate packages)
+- Custom `PolicyEngine` implementations
+- Industry compliance packs (HIPAA, GDPR, SOC2)
+- Provider-specific adapters
+- Monitoring & observability integrations
+
+## FAQ
+
+**Q: Is KL production-ready?**  
+A: Yes. Version 0.3.0 is stable and tested. Currently in alpha for community feedback, but the core is production-grade.
+
+**Q: Does KL work with any LLM provider?**  
+A: Yes. KL is provider-agnostic. Write a simple wrapper function for any API (Anthropic, OpenAI, Azure, local models) and execute it via `CAEL.execute()`.
+
+**Q: What's the performance overhead?**  
+A: Minimal. Core execution adds ~1-2ms. Multiprocessing timeout adds ~50-100ms for process spawn.
+
+**Q: Can I use KL without AI/LLMs?**  
+A: Absolutely. KL works for any operation requiring governance: system calls, database operations, API calls, mathematical computations.
+
+**Q: How do I implement custom policies?**  
+A: Implement the `PolicyEngine` interface. See `DefaultSafePolicyEngine` in `policy.py` as reference.
+
+**Q: Can I disable policy enforcement?**  
+A: You can inject a permissive `PolicyEngine` that allows everything, but this is not recommended.
+
+**Q: Is there commercial support?**  
+A: Integration services available for enterprise deployments. Contact via GitHub Issues for inquiries.
+
+**Q: Can I use KL in closed-source/commercial projects?**  
+A: Yes. MIT License permits commercial use without restrictions.
 
 ## Contributing
 

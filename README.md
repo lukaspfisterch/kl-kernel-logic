@@ -2,8 +2,7 @@
 
 **Version 0.3.0** | Lightweight, deterministic, governance-ready execution framework.
 
-# KL Kernel Logic
-
+[![PyPI version](https://img.shields.io/pypi/v/kl-kernel-logic.svg)](https://pypi.org/project/kl-kernel-logic/)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Status](https://img.shields.io/badge/Status-Alpha-orange)
 [![Tests](https://github.com/lukaspfisterch/kl-kernel-logic/actions/workflows/tests.yml/badge.svg)](https://github.com/lukaspfisterch/kl-kernel-logic/actions/workflows/tests.yml)
@@ -277,7 +276,16 @@ docs/
 - **docs**: Architecture and usage guides
 
 ## Installation
-```powershell
+
+### From PyPI (Recommended)
+
+```bash
+pip install kl-kernel-logic
+```
+
+### From Source (Development)
+
+```bash
 git clone https://github.com/lukaspfisterch/kl-kernel-logic.git
 cd kl-kernel-logic
 
@@ -287,13 +295,31 @@ python -m venv .venv
 # Linux/macOS
 source .venv/bin/activate
 
-pip install -r requirements.txt
+pip install -e .
 ```
 
-Run tests:
+### Verify Installation
+
+```bash
+python -c "import kl_kernel_logic; print(kl_kernel_logic.__version__)"
+```
+
+### Run Tests (Development)
 
 ```bash
 pytest -q
+```
+
+## Quick Start
+
+Install and run your first KL operation:
+
+```bash
+# Install
+pip install kl-kernel-logic
+
+# Verify
+python -c "import kl_kernel_logic; print(f'KL v{kl_kernel_logic.__version__} ready!')"
 ```
 
 ## Quick Example

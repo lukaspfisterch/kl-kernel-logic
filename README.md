@@ -151,7 +151,7 @@ Each run produces a trace bundle:
 ```
 
 ## Features
-- - Declarative operation model (Psi)
+- Declarative operation model (Psi)
 - Versioned metadata envelope
 - Deterministic kernel execution
 - Serializable execution traces

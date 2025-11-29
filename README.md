@@ -161,8 +161,8 @@ Each run produces a trace bundle:
 - Reference implementations and examples included
 - Fully testable and predictable runtime behavior
 
-## Timeout & Multiprocessing (v0.2.0+)
-KL 0.2.0 introduces timeout enforcement via multiprocessing. When a timeout is specified, tasks execute in a separate process and are terminated if they exceed the deadline.
+## Timeout & Multiprocessing (v0.3.0+)
+KL 0.3.0 introduces timeout enforcement via multiprocessing. When a timeout is specified, tasks execute in a separate process and are terminated if they exceed the deadline.
 
 ### Timeout Precedence
 Timeouts are resolved in the following order (highest to lowest priority):
@@ -251,12 +251,12 @@ Future versions expand on:
 ```
 src/kl_kernel_logic/
     psi.py                # Declarative operation definitions
-    psi_envelope.py       # Versioned transport container (v0.2.0+)
+    psi_envelope.py       # Versioned transport container
     kernel.py             # Deterministic execution engine
     cael.py               # Execution wrapper & policy bridge
-    execution_context.py  # Policy and context types (v0.2.0+)
-    policy.py             # Policy templates and evaluation (v0.2.0+)
-    audit.py              # Audit report builder (v0.2.0+)
+    execution_context.py  # Policy and context types
+    policy.py             # Policy templates and evaluation
+    audit.py              # Audit report builder
     examples/
     examples_foundations/
 
@@ -265,12 +265,12 @@ docs/
 ```
 
 - **psi.py**: Operation definition layer
-- **psi_envelope.py** (v0.2.0): Versioned metadata transport
+- **psi_envelope.py**: Versioned metadata transport
 - **kernel.py**: Low-level execution
 - **cael.py**: Policy evaluation and constraint handling
-- **execution_context.py** (v0.2.0): User and policy context types
-- **policy.py** (v0.3.0): PolicyEngine interface and DefaultSafePolicyEngine
-- **audit.py** (v0.2.0): Audit report generation from execution traces
+- **execution_context.py**: User and policy context types
+- **policy.py**: PolicyEngine interface and DefaultSafePolicyEngine
+- **audit.py**: Audit report generation from execution traces
 - **examples**: Reference implementations
 - **examples_foundations**: Deterministic mathematical operations (Poisson, trajectory, smoothing)
 - **tests**: Full test coverage

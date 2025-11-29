@@ -161,7 +161,7 @@ Each run produces a trace bundle:
 - Reference implementations and examples included
 - Fully testable and predictable runtime behavior
 
-## Timeout & Multiprocessing (v0.3.0+)
+## Timeout & Multiprocessing
 KL 0.3.0 introduces timeout enforcement via multiprocessing. When a timeout is specified, tasks execute in a separate process and are terminated if they exceed the deadline.
 
 ### Timeout Precedence
@@ -230,7 +230,7 @@ cael.execute(psi=psi, task=MyTask(), timeout_seconds=5)
 - The worker process is forcibly terminated after the timeout expires
 - No partial results are returned if the task did not complete
 
-## Policy & Audit (Integrated in 0.3.0)
+## Policy & Audit
 KL 0.3.0 includes a policy engine and audit layer:
 
 - **PolicyEngine Interface**: Extensible policy evaluation via strategy pattern
@@ -296,7 +296,7 @@ Run tests:
 pytest -q
 ```
 
-## Quick Example (updated for v0.3.0)
+## Quick Example
 ```python
 from kl_kernel_logic import (
     PsiDefinition, PsiConstraints,
@@ -338,7 +338,7 @@ print(trace.describe())
 }
 ```
 
-## Policy Example (v0.3.0)
+## Policy Example
 KL 0.3.0 uses the PolicyEngine pattern for extensible policy evaluation:
 
 ```python

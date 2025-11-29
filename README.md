@@ -15,7 +15,7 @@ KL Kernel Logic separates the declarative definition of an operation (Psi) from 
 - inspectable and auditable run results
 - clean integration paths for both deterministic code and AI-based components
 
-The goal is not to build yet another orchestration system, but to provide the minimum deterministic substrate on which safe, inspectable, policy-driven computation can be built.
+The goal is not to build a full orchestration system, but to provide the minimal deterministic substrate on top of which such systems can be built.
 
 ## Table of Contents
 - Overview
@@ -192,7 +192,7 @@ Each run produces a trace bundle:
 - Fully testable and predictable runtime behavior
 
 ## Timeout & Multiprocessing
-KL 0.3.0 introduces timeout enforcement via multiprocessing. When a timeout is specified, tasks execute in a separate process and are terminated if they exceed the deadline.
+KL 0.3.0 introduces timeout enforcement via multiprocessing. When a timeout is specified, tasks execute in a separate process and are terminated if they exceed the deadline. **If no timeout is active, execution runs in the main process without multiprocessing overhead.**
 
 ### Timeout Precedence
 Timeouts are resolved in the following order (highest to lowest priority):
@@ -218,8 +218,8 @@ ctx = ExecutionContext(
 trace = cael.execute(psi=psi, task=my_task, ctx=ctx, timeout_seconds=3)
 ```
 
-### Multiprocessing Constraints (Windows & Linux)
-When a timeout is enforced, tasks execute in a separate process using Python's multiprocessing module with spawn context (for Windows compatibility). This imposes a pickling constraint:
+### Multiprocessing Constraints
+When a timeout is enforced, tasks execute in a separate process using Python's multiprocessing module with spawn context. Spawn is the default on Windows and macOS, and available on Linux. This imposes a pickling constraint:
 
 Tasks must be defined at module top-level (not as lambdas or nested functions) to be serializable across process boundaries.
 
@@ -265,6 +265,7 @@ KL 0.3.0 includes a policy engine and audit layer:
 
 - **PolicyEngine Interface**: Extensible policy evaluation via strategy pattern
 - **DefaultSafePolicyEngine**: Effect-based policy evaluation (pure, read, io, external, ai)
+- **ExecutionPolicy**: Optional per-request flags (timeout_seconds, allow_network, allow_filesystem) that can be evaluated by PolicyEngine implementations
 - **Policy Evaluation**: Blocks execution before Kernel if policies are violated
 - **Audit Reports**: Deterministic, JSON-serializable execution records with traces
 - **Envelope Versioning**: PsiEnvelope carries UUID, timestamp, and optional metadata for traceability
@@ -563,7 +564,7 @@ Validates:
 ## FAQ
 
 **Q: Is KL production-ready?**  
-A: Yes. Version 0.3.0 is stable and tested. Currently in alpha for community feedback, but the core is production-grade.
+A: Yes. Version 0.3.0 is stable and tested. Currently marked as alpha for scope and API feedback. The core engine itself is designed for production use. Status "alpha" refers to the limited feature scope, not to stability.
 
 **Q: Does KL work with any LLM provider?**  
 A: Yes. KL is provider-agnostic. Write a simple wrapper function for any API (Anthropic, OpenAI, Azure, local models) and execute it via `CAEL.execute()`.

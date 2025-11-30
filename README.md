@@ -328,7 +328,9 @@ The suite covers:
 
 ## Theoretical Foundation
 
-KL Kernel Logic is informed by a small execution theory that defines:
+**The KL Execution Theory defines the minimal axioms any controlled execution system must satisfy. KL Kernel Logic is the reference implementation of these axioms.**
+
+The theory defines five core axioms:
 
 - **Δ** (atomic transitions)
 - **V** (behaviour sequences)

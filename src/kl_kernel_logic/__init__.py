@@ -1,9 +1,11 @@
 """
 KL Kernel Logic core package.
 
-Exposes the fundamental building blocks for defining and executing
-operations in the KL model. This package implements the abstract
-KL Execution Theory as concrete Python constructs.
+The KL Execution Theory defines the minimal axioms any controlled execution
+system must satisfy. KL Kernel Logic is the reference implementation of these axioms.
+
+Exposes the fundamental building blocks for defining and executing operations
+in the KL model.
 
 Core axioms → Code mapping:
   Δ (atomic transitions)  → Kernel.execute()

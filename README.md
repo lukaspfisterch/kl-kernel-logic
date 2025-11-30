@@ -1,6 +1,6 @@
 # KL Kernel Logic
 
-**Lightweight deterministic execution substrate for governed operations**
+**KL Kernel Logic is a small deterministic execution substrate designed to run both deterministic and nondeterministic operations under explicit constraints. It does not try to orchestrate. It provides a clean, auditable execution core that higher-level systems can build on.**
 
 [![PyPI version](https://img.shields.io/pypi/v/kl-kernel-logic.svg)](https://pypi.org/project/kl-kernel-logic/)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
@@ -569,11 +569,7 @@ Validates:
 - Trace schema validation (JSON Schema)
 - `PsiConstraints` validation in CAEL (opt-in)
 
-Future considerations (no timeline):
-- LLM adapter library
-- Retry/fallback handlers
-- Web-based trace viewer
-- SIEM connectors
+"Future considerations (no timeline)"
 
 ## FAQ
 

@@ -569,7 +569,7 @@ Validates:
 - Trace schema validation (JSON Schema)
 - `PsiConstraints` validation in CAEL (opt-in)
 
-"Future considerations (no timeline)"
+"Future considerations"
 
 ## FAQ
 

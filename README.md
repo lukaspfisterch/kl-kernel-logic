@@ -1,50 +1,52 @@
 # KL Kernel Logic
 
-**Version 0.3.0** | Lightweight, deterministic, governance-ready execution framework.
+**Lightweight deterministic execution substrate for governed operations**
 
 [![PyPI version](https://img.shields.io/pypi/v/kl-kernel-logic.svg)](https://pypi.org/project/kl-kernel-logic/)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Status](https://img.shields.io/badge/Status-Alpha-orange)
-[![Tests](https://github.com/lukaspfisterch/kl-kernel-logic/actions/workflows/tests.yml/badge.svg)](https://github.com/lukaspfisterch/kl-kernel-logic/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/lukaspfisterch/kl-kernel-logic/blob/main/LICENSE)
 
-KL Kernel Logic separates the declarative definition of an operation (Psi) from its controlled execution (CAEL + Kernel), enabling:
+KL Kernel Logic provides a small deterministic execution layer for running operations (Psi) under explicit constraints.
 
-- reproducible computation
-- policy-aligned execution
-- inspectable and auditable run results
-- clean integration paths for both deterministic code and AI-based components
+It separates what should run (Psi) from how it is executed (CAEL + Kernel), producing a fully inspectable execution trace.
 
-The goal is not to build a full orchestration system, but to provide the minimal deterministic substrate on top of which such systems can be built.
+KL focuses on three goals:
+- reproducible behavior for deterministic tasks
+- auditable behavior for nondeterministic tasks (including LLMs)
+- a clean, minimal substrate for higher-level systems
+
+**It is not an orchestration framework.**  
+It is the deterministic core that orchestration tools can build on.
 
 ## Table of Contents
-- Overview
-- Use Cases
-- Core Concepts
-- Architecture
-- Features
-- Timeout & Multiprocessing
-- Policy & Audit
-- Repository Structure
-- Installation
-- Quick Start
-- Quick Example
-- Policy Example
-- AI/LLM Example
-- Foundations Examples
-- Tests
-- Roadmap
-- FAQ
-- Contributing
-- License
+- [Overview](#overview)
+- [Use Cases](#use-cases)
+- [Core Concepts](#core-concepts)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Timeout & Multiprocessing](#timeout--multiprocessing)
+- [Policy & Audit](#policy--audit)
+- [Repository Structure](#repository-structure)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Quick Example](#quick-example)
+- [Policy Example](#policy-example)
+- [AI/LLM Example](#aillm-example)
+- [Foundations Examples](#foundations-examples)
+- [Tests](#tests)
+- [Roadmap](#roadmap)
+- [FAQ](#faq)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Overview
+
 KL Kernel Logic provides a minimal but expressive grammar for defining operations (Psi) and executing them under explicit constraints (CAEL). It addresses a gap in modern AI/automation stacks:
 
 "How do we ensure reproducible and auditable execution when integrating AI or semi-deterministic components?"
 
 KL solves this by:
-
 - defining operations in a declarative schema
 - transporting them via versioned envelopes
 - executing them through a deterministic kernel
@@ -54,31 +56,25 @@ The framework imposes no domain-specific semantics. It is a binding layer, desig
 
 ## Use Cases
 
-KL is designed for scenarios requiring **governed execution** with **full audit trails**:
+KL is designed for tasks that require controlled execution with transparent audit trails:
 
-### Healthcare & Regulated Industries
-- Execute LLM operations with HIPAA/GDPR compliance
-- Complete audit trail for every AI interaction
-- Policy enforcement prevents data leaks
-- Demonstrate compliance to auditors
+### Controlled AI Calls
+- Route LLM requests with full input/output tracing
+- Track nondeterminism explicitly
+- Enforce timeouts and network policies
 
-### Enterprise AI Integration
-- Route operations across internal/external LLM providers
-- Block unauthorized external API calls
-- Track usage and costs per user/department
-- Migrate providers without code changes
+### Reproducible Computation
+- Scientific workflows
+- Deterministic mathematical operations
+- Testable pipelines
 
-### Research & Scientific Computing
-- Reproducible computation workflows
-- Deterministic operations with execution tracing
-- Policy-controlled resource access
-
-### Infrastructure Automation
-- Governed system operations (filesystem, network)
-- Trace every infrastructure change
-- Prevent unauthorized access
+### Governed System Tasks
+- Controlled filesystem or network access
+- Operation-level auditability
+- Policy enforcement before execution
 
 ## Core Concepts
+
 ### Psi (Principle Definition Layer)
 Psi describes the essence of an operation, independent of its technical execution:
 
@@ -126,7 +122,7 @@ A wrapper providing:
 - basic validation
 - envelope creation or enrichment
 - constraint mapping
-- optional (future) policy evaluation
+- policy evaluation
 - value-safe, exception-capturing execution
 
 CAEL does not execute tasks itself. It delegates to the Kernel.
@@ -143,6 +139,7 @@ The Kernel is intentionally minimal:
 It focuses only on clean execution and structured trace output.
 
 ## Architecture
+
 ```text
 Client / App / Orchestrator
             |
@@ -181,6 +178,7 @@ Each run produces a trace bundle:
 ```
 
 ## Features
+
 - Declarative operation model (Psi)
 - Versioned metadata envelope
 - Deterministic kernel execution
@@ -192,6 +190,7 @@ Each run produces a trace bundle:
 - Fully testable and predictable runtime behavior
 
 ## Timeout & Multiprocessing
+
 KL 0.3.0 introduces timeout enforcement via multiprocessing. When a timeout is specified, tasks execute in a separate process and are terminated if they exceed the deadline. **If no timeout is active, execution runs in the main process without multiprocessing overhead.**
 
 ### Timeout Precedence
@@ -261,6 +260,7 @@ cael.execute(psi=psi, task=MyTask(), timeout_seconds=5)
 - No partial results are returned if the task did not complete
 
 ## Policy & Audit
+
 KL 0.3.0 includes a policy engine and audit layer:
 
 - **PolicyEngine Interface**: Extensible policy evaluation via strategy pattern
@@ -270,7 +270,7 @@ KL 0.3.0 includes a policy engine and audit layer:
 - **Audit Reports**: Deterministic, JSON-serializable execution records with traces
 - **Envelope Versioning**: PsiEnvelope carries UUID, timestamp, and optional metadata for traceability
 
-Future versions expand on:
+Future extensions:
 
 - enriched policy language (capabilities, role-based access)
 - input/output scrubbing and validation schemas
@@ -279,6 +279,7 @@ Future versions expand on:
 - governance connectors (JSONL, NDJSON, SIEM integrations)
 
 ## Repository Structure
+
 ```
 src/kl_kernel_logic/
     psi.py                # Declarative operation definitions
@@ -355,6 +356,7 @@ python -c "import kl_kernel_logic; print(f'KL v{kl_kernel_logic.__version__} rea
 ```
 
 ## Quick Example
+
 ```python
 from kl_kernel_logic import (
     PsiDefinition, PsiConstraints,
@@ -384,6 +386,7 @@ print(trace.describe())
 ```
 
 ### Output (simplified)
+
 ```text
 {
   "psi": {...},
@@ -397,6 +400,7 @@ print(trace.describe())
 ```
 
 ## Policy Example
+
 KL 0.3.0 uses the PolicyEngine pattern for extensible policy evaluation:
 
 ```python
@@ -504,6 +508,7 @@ Every LLM call is:
 - ✅ Auditable for compliance
 
 ## Foundations Examples
+
 Location: `src/kl_kernel_logic/examples_foundations/`
 
 Contains deterministic operations such as:
@@ -519,6 +524,7 @@ These examples demonstrate:
 - usage of Psi and CAEL without AI dependencies
 
 ## Tests
+
 Execute the suite:
 
 ```bash
@@ -536,35 +542,22 @@ Validates:
 
 ## Roadmap
 
-### v0.4.0 (Q1 2026) - Enhanced Policies
-- [ ] Extended `PolicyEngine` interface (access to envelope + context)
-- [ ] JSONL/NDJSON trace export
-- [ ] Trace schema validation (JSON Schema)
-- [ ] `PsiConstraints` validation in CAEL (opt-in)
+### v0.4.0 (Q1 2026)
+- Extended `PolicyEngine` interface (access to envelope + context)
+- JSONL/NDJSON trace export
+- Trace schema validation (JSON Schema)
+- `PsiConstraints` validation in CAEL (opt-in)
 
-### v0.5.0 (Q2 2026) - LLM Ecosystem
-- [ ] LLM adapter library (Anthropic, OpenAI, Azure, Ollama)
-- [ ] Retry/fallback handlers
-- [ ] Cost tracking middleware
-- [ ] Streaming support for LLM responses
-
-### v1.0.0 (Q3 2026) - Enterprise Features
-- [ ] Workflow orchestration (chains, DAGs)
-- [ ] Web-based trace viewer UI
-- [ ] SIEM connectors (Splunk, Elasticsearch)
-- [ ] Signature validation & crypto integration
-- [ ] Multi-tenancy support
-
-### Community Extensions (separate packages)
-- Custom `PolicyEngine` implementations
-- Industry compliance packs (HIPAA, GDPR, SOC2)
-- Provider-specific adapters
-- Monitoring & observability integrations
+Future considerations (no timeline):
+- LLM adapter library
+- Retry/fallback handlers
+- Web-based trace viewer
+- SIEM connectors
 
 ## FAQ
 
 **Q: Is KL production-ready?**  
-A: Yes. Version 0.3.0 is stable and tested. Currently marked as alpha for scope and API feedback. The core engine itself is designed for production use. Status "alpha" refers to the limited feature scope, not to stability.
+A: KL is designed for production-style deterministic execution, but still in alpha to refine scope and API shape. Status "alpha" refers to the limited feature scope, not to stability.
 
 **Q: Does KL work with any LLM provider?**  
 A: Yes. KL is provider-agnostic. Write a simple wrapper function for any API (Anthropic, OpenAI, Azure, local models) and execute it via `CAEL.execute()`.
@@ -580,9 +573,6 @@ A: Implement the `PolicyEngine` interface. See `DefaultSafePolicyEngine` in `pol
 
 **Q: Can I disable policy enforcement?**  
 A: You can inject a permissive `PolicyEngine` that allows everything, but this is not recommended.
-
-**Q: Is there commercial support?**  
-A: Integration services available for enterprise deployments. Contact via GitHub Issues for inquiries.
 
 **Q: Can I use KL in closed-source/commercial projects?**  
 A: Yes. MIT License permits commercial use without restrictions.

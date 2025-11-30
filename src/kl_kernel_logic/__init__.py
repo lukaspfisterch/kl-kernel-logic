@@ -2,8 +2,20 @@
 KL Kernel Logic core package.
 
 Exposes the fundamental building blocks for defining and executing
-operations in the KL model. This module provides the stable public API
-for Psi definitions, envelopes, execution, policy, and audit.
+operations in the KL model. This package implements the abstract
+KL Execution Theory as concrete Python constructs.
+
+Core axioms → Code mapping:
+  Δ (atomic transitions)  → Kernel.execute()
+  V (behaviour)           → ExecutionTrace sequences
+  t (logical time)        → runtime_ms + trace indices
+  G (governance)          → PolicyEngine evaluation
+  L (boundaries)          → ExecutionPolicy + PsiConstraints
+
+This module provides the stable public API for Psi definitions,
+envelopes, execution, policy, and audit.
+
+See docs/execution_theory_in_code.md for complete correspondence.
 """
 
 # Psi layer

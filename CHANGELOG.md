@@ -6,6 +6,27 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ---
 
+## [0.3.4] – 2025-12-01
+
+**Status:** Governance enhancements, schema clarity.
+
+### Changed
+
+- Renamed `PsiDefinition.version` → `schema_version` for clarity
+- `from_dict()` accepts both names for backward compatibility
+
+### Added
+
+- `PsiDefinition.correlation_id` - Optional field for request tracing
+- `PsiDefinition.criticality` - Optional field for policy prioritization
+- `ExecutionTrace.policy_result` - Top-level policy summary (`"allow"`, `"block"`, `"timeout"`)
+
+### Fixed
+
+- Documentation consistency across all files
+
+---
+
 ## [0.3.3] – 2025-11-30
 
 **Status:** Minimal, stable, theory-aligned core.

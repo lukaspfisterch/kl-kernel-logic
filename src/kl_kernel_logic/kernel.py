@@ -27,7 +27,7 @@ class ExecutionTrace:
       - transport metadata (envelope)
       - outcome (success, output, error)
       - timing (started_at, finished_at, runtime_ms)
-      - governance hooks (trace_id, parent_trace_id, policy_decisions)
+      - governance hooks (trace_id, parent_trace_id, policy_decisions, policy_result)
       - free form metadata
     """
 
@@ -46,6 +46,7 @@ class ExecutionTrace:
     parent_trace_id: Optional[str] = None
 
     policy_decisions: List[Mapping[str, Any]] = field(default_factory=list)
+    policy_result: Optional[str] = None  # Summary: "allow", "block", "timeout" (added in 0.3.4)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def describe(self) -> Dict[str, Any]:
@@ -66,6 +67,7 @@ class ExecutionTrace:
             "finished_at": self.finished_at,
             "runtime_ms": self.runtime_ms,
             "policy_decisions": [dict(d) for d in self.policy_decisions],
+            "policy_result": self.policy_result,
             "metadata": dict(self.metadata),
         }
 

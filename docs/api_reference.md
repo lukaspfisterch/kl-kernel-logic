@@ -125,11 +125,13 @@ class PsiDefinition:
     psi_type: str
     domain: str
     effect: str
-    version: str = "0.3.3"
+    schema_version: str = "1.0"
     constraints: PsiConstraints = field(default_factory=PsiConstraints)
     description: Optional[str] = None
     tags: List[str] = field(default_factory=list)
     metadata: Dict[str, str] = field(default_factory=dict)
+    correlation_id: Optional[str] = None
+    criticality: Optional[str] = None
 ```
 
 ### Fields
@@ -139,11 +141,13 @@ class PsiDefinition:
 | `psi_type` | `str` | Logical type identifier (e.g., `"math.add"`, `"text.uppercase"`) |
 | `domain` | `str` | Domain grouping (e.g., `"math"`, `"text"`, `"ai"`) |
 | `effect` | `str` | Effect category (see below) |
-| `version` | `str` | Schema version (default: `"0.3.3"`) |
+| `schema_version` | `str` | Psi schema version (default: `"1.0"`) |
 | `constraints` | `PsiConstraints` | Governance constraints |
 | `description` | `Optional[str]` | Human-readable description |
 | `tags` | `List[str]` | Optional categorization tags |
 | `metadata` | `Dict[str, str]` | Additional metadata (JSON-compatible) |
+| `correlation_id` | `Optional[str]` | Request correlation identifier for tracing |
+| `criticality` | `Optional[str]` | Criticality level: `"low"`, `"medium"`, `"high"` |
 
 ### Effect Categories (Convention)
 
@@ -166,7 +170,7 @@ def assert_minimal_valid() -> None:
     """Validate required fields (psi_type, domain, effect must be non-empty)"""
 
 def psi_key() -> str:
-    """Return stable key: f"{psi_type}@{version}" """
+    """Return stable key: f"{psi_type}@{schema_version}" """
 
 def describe() -> Dict[str, Any]:
     """Return JSON-serializable representation"""
@@ -195,6 +199,7 @@ psi = PsiDefinition(
         temporal="instant",
     ),
     tags=["text-processing", "deterministic"],
+    correlation_id="req-abc-123",  # Optional: for tracing
 )
 ```
 
@@ -556,6 +561,7 @@ class ExecutionTrace:
     parent_trace_id: Optional[str] = None
     
     policy_decisions: List[Mapping[str, Any]] = field(default_factory=list)
+    policy_result: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 ```
 
@@ -574,6 +580,7 @@ class ExecutionTrace:
 | `trace_id` | `str` | Unique UUID for this trace |
 | `parent_trace_id` | `Optional[str]` | Parent trace UUID for nested execution |
 | `policy_decisions` | `List[Mapping]` | Policy decisions applied |
+| `policy_result` | `Optional[str]` | Policy summary: `"allow"`, `"block"`, `"timeout"` |
 | `metadata` | `Dict[str, Any]` | Additional trace metadata |
 
 ### Methods

@@ -110,6 +110,8 @@ class CAEL:
                     "reason": decision.reason,
                 }
             )
+            # Set policy result summary for easier audit/logging
+            trace.policy_result = "allow" if decision.allowed else "block"
 
         # 5. Timeout classification (post-hoc, based on measured runtime)
         timeout_seconds: Optional[float] = None
@@ -129,5 +131,6 @@ class CAEL:
             else:
                 trace.error = timeout_message
             trace.success = False
+            trace.policy_result = "timeout"  # Mark as timeout violation
 
         return trace

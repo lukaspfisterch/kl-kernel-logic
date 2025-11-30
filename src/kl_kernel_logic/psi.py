@@ -161,19 +161,25 @@ class PsiDefinition:
     - psi_type: fully qualified logical identifier of the operation
     - domain: logical domain (e.g. "math", "io", "ai")
     - effect: execution effect class (e.g. "pure", "read", "io", "external", "ai")
-    - version: schema version of this Psi definition (default: "0.3.3")
+    - schema_version: version of the Psi schema itself (default: "1.0")
     - constraints: PsiConstraints instance used for governance anchoring
     - description, tags, metadata: optional descriptive fields
+    - correlation_id: optional correlation identifier for tracing across systems
+    - criticality: optional criticality level ("low", "medium", "high")
     """
 
     psi_type: str
     domain: str
     effect: str
-    version: str = "0.3.3"
+    schema_version: str = "1.0"
     constraints: PsiConstraints = field(default_factory=PsiConstraints)
     description: Optional[str] = None
     tags: List[str] = field(default_factory=list)
     metadata: Dict[str, str] = field(default_factory=dict)
+    
+    # Optional meta-fields for tracing and governance (added in 0.3.4)
+    correlation_id: Optional[str] = None
+    criticality: Optional[str] = None
 
     # ------------------------------------------------------------------
     # Core helpers
@@ -199,9 +205,9 @@ class PsiDefinition:
         """
         Stable key for identifying this PsiDefinition.
 
-        Combines psi_type and version.
+        Combines psi_type and schema_version.
         """
-        return f"{self.psi_type}@{self.version}"
+        return f"{self.psi_type}@{self.schema_version}"
 
     def describe(self) -> Dict[str, Any]:
         """
@@ -220,11 +226,13 @@ class PsiDefinition:
             "psi_type": self.psi_type,
             "domain": self.domain,
             "effect": self.effect,
-            "version": self.version,
+            "schema_version": self.schema_version,
             "constraints": self.constraints.to_dict(),
             "description": self.description,
             "tags": list(self.tags),
             "metadata": dict(self.metadata),
+            "correlation_id": self.correlation_id,
+            "criticality": self.criticality,
         }
 
     @classmethod
@@ -233,13 +241,19 @@ class PsiDefinition:
         Reconstruct a PsiDefinition from a dict produced by to_dict().
         """
         constraints_data = data.get("constraints") or {}
+        
+        # Backward compatibility: accept both "version" and "schema_version"
+        schema_version = data.get("schema_version") or data.get("version", "1.0")
+        
         return cls(
             psi_type=data["psi_type"],
             domain=data["domain"],
             effect=data["effect"],
-            version=data.get("version", "0.3.3"),
+            schema_version=schema_version,
             constraints=PsiConstraints.from_dict(constraints_data),
             description=data.get("description"),
             tags=list(data.get("tags") or []),
             metadata=dict(data.get("metadata") or {}),
+            correlation_id=data.get("correlation_id"),
+            criticality=data.get("criticality"),
         )

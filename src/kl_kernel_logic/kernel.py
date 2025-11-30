@@ -1,79 +1,58 @@
 """
-Kernel
+Deterministic execution kernel.
 
-Executes operations under the KL model and produces execution traces.
+Receives a PsiDefinition, an optional PsiEnvelope and a callable task.
+Executes the task once and returns a structured ExecutionTrace.
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, Optional, List
+from time import perf_counter
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 from uuid import uuid4
-import multiprocessing
 
 from .psi import PsiDefinition
 from .psi_envelope import PsiEnvelope
 
 
-def _utc_timestamp() -> str:
-    return (
-        datetime.now(timezone.utc)
-        .isoformat(timespec="milliseconds")
-        .replace("+00:00", "Z")
-    )
-
-
-# Top-level worker to make multiprocessing spawn-safe on Windows
-def _kernel_worker(q, func, kwargs):
-    try:
-        res = func(**kwargs)
-        q.put(("ok", res))
-    except Exception as e:
-        q.put(("err", (type(e).__name__, str(e))))
-
-
-@dataclass(frozen=True)
+@dataclass
 class ExecutionTrace:
     """
-    Immutable record of a single execution.
+    Single execution record.
 
-    Fields:
-    - psi: PsiDefinition that was executed
-    - envelope: PsiEnvelope used for this run
-    - success: True if the task completed without raising
-    - output: return value from the task (if any)
-    - error: textual representation of the error (if any)
-    - started_at: UTC timestamp when execution started
-    - finished_at: UTC timestamp when execution finished
-    - metadata: optional execution level metadata
-
-    KL 0.3.0 extensions:
-    - trace_id: globally unique identifier for this execution
-    - parent_trace_id: optional parent trace id for orchestrated runs
-    - policy_decisions: list of policy-related information attached by CAEL
-    - runtime_ms: optional runtime in milliseconds (may be None)
+    Captures:
+      - logical intent (psi)
+      - transport metadata (envelope)
+      - outcome (success, output, error)
+      - timing (started_at, finished_at, runtime_ms)
+      - governance hooks (trace_id, parent_trace_id, policy_decisions)
+      - free form metadata
     """
 
     psi: PsiDefinition
     envelope: PsiEnvelope
+
     success: bool
     output: Any
     error: Optional[str]
+
     started_at: str
     finished_at: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    runtime_ms: float
 
-    # KL 0.3.0 additions
     trace_id: str = field(default_factory=lambda: str(uuid4()))
     parent_trace_id: Optional[str] = None
-    policy_decisions: List[Dict[str, Any]] = field(default_factory=list)
-    runtime_ms: Optional[float] = None
+
+    policy_decisions: List[Mapping[str, Any]] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def describe(self) -> Dict[str, Any]:
         """
-        Serialisable representation of the execution trace.
+        Serializable representation of the execution trace.
 
-        Existing keys are preserved for backwards compatibility.
-        New fields are additive.
+        Keys are stable and additive. Existing keys are not renamed.
         """
         return {
             "trace_id": self.trace_id,
@@ -93,86 +72,69 @@ class ExecutionTrace:
 
 class Kernel:
     """
-    Minimal execution kernel.
+    Minimal execution engine.
 
-    It does not apply policies or scheduling. It is responsible for:
-    - calling the task
-    - capturing timing
-    - packaging everything into an ExecutionTrace
+    No policy logic.
+    No orchestration.
+    Only executes a callable once and returns an ExecutionTrace.
     """
 
     def execute(
         self,
+        *,
         psi: PsiDefinition,
         task: Callable[..., Any],
-        *,
         envelope: Optional[PsiEnvelope] = None,
-        timeout_seconds: Optional[int] = None,
+        parent_trace_id: Optional[str] = None,
+        policy_decisions: Optional[Sequence[Mapping[str, Any]]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> ExecutionTrace:
-        """Execute a task and return an ExecutionTrace.
-
-        If `timeout_seconds` is provided, the task is executed in a separate
-        process and will be terminated if it does not complete in time.
         """
-        if envelope is None:
-            envelope = PsiEnvelope(psi=psi, version="1.0")
+        Execute a task under a given Psi and optional envelope.
 
+        Exceptions are captured into ExecutionTrace.error and never bubble up.
+        """
+
+        # Ensure envelope exists
+        env = envelope if envelope is not None else PsiEnvelope(psi=psi)
+
+        # Normalise optional collections
+        policy_list: List[Mapping[str, Any]] = (
+            list(policy_decisions) if policy_decisions is not None else []
+        )
+        meta: Dict[str, Any] = dict(metadata) if metadata is not None else {}
+
+        # RFC 3339 UTC timestamps
         started_dt = datetime.now(timezone.utc)
-        started = _utc_timestamp()
-        success = True
-        result: Any = None
+        started_at = started_dt.isoformat(timespec="milliseconds")
+        t0 = perf_counter()
+
+        success = False
+        output: Any = None
         error_msg: Optional[str] = None
 
-        if timeout_seconds is None:
-            # Simple direct call
-            try:
-                result = task(**kwargs)
-            except Exception as exc:  # noqa: BLE001
-                success = False
-                error_msg = f"{type(exc).__name__}: {exc}"
-        else:
-            # Run in separate process to enforce timeout
-            ctx = multiprocessing.get_context("spawn")
-            q = ctx.Queue()
-            p = ctx.Process(target=_kernel_worker, args=(q, task, kwargs))
-            p.start()
-            p.join(timeout_seconds)
-            if p.is_alive():
-                p.terminate()
-                p.join()
-                success = False
-                error_msg = "TimeoutError: execution exceeded timeout"
-            else:
-                try:
-                    status, payload = q.get_nowait()
-                except Exception:
-                    success = False
-                    error_msg = "ExecutionError: no result returned"
-                else:
-                    if status == "ok":
-                        result = payload
-                    else:
-                        success = False
-                        err_type, err_text = payload
-                        error_msg = f"{err_type}: {err_text}"
+        try:
+            output = task(**kwargs)
+            success = True
+        except Exception as exc:
+            success = False
+            error_msg = f"{exc.__class__.__name__}: {exc}"
 
         finished_dt = datetime.now(timezone.utc)
-        finished = _utc_timestamp()
-        runtime_ms = (finished_dt - started_dt).total_seconds() * 1000.0
+        finished_at = finished_dt.isoformat(timespec="milliseconds")
+        runtime_ms = (perf_counter() - t0) * 1000.0
 
         return ExecutionTrace(
             psi=psi,
-            envelope=envelope,
+            envelope=env,
             success=success,
-            output=result,
+            output=output,
             error=error_msg,
-            started_at=started,
-            finished_at=finished,
+            started_at=started_at,
+            finished_at=finished_at,
             runtime_ms=runtime_ms,
-            metadata={},
-            # KL 0.3.0 fields keep their defaults unless explicitly set
+            parent_trace_id=parent_trace_id,
+            policy_decisions=policy_list,
+            metadata=meta,
         )
-
-
-__all__ = ["ExecutionTrace", "Kernel"]

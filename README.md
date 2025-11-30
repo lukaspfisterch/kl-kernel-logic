@@ -7,17 +7,38 @@
 ![Status](https://img.shields.io/badge/Status-Alpha-orange)
 [![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/lukaspfisterch/kl-kernel-logic/blob/main/LICENSE)
 
-KL Kernel Logic provides a small deterministic execution layer for running operations (Psi) under explicit constraints.
+KL Kernel Logic separates the *definition* of an operation (Psi) from its *execution* (CAEL + Kernel).  
+It gives you a small deterministic core that can run both fully deterministic tasks and nondeterministic ones (including LLM calls) with a clear execution trace.
 
-It separates what should run (Psi) from how it is executed (CAEL + Kernel), producing a fully inspectable execution trace.
+**What you get:**
+- Declarative operation model (Psi)
+- Deterministic kernel execution with structured traces
+- Versioned envelopes for transport and audit
+- Policy-ready execution bridge (timeouts, effect classes)
+- Examples for deterministic math, system calls, and AI tasks
 
-KL focuses on three goals:
-- reproducible behavior for deterministic tasks
-- auditable behavior for nondeterministic tasks (including LLMs)
-- a clean, minimal substrate for higher-level systems
+```bash
+pip install kl-kernel-logic
+```
 
-**It is not an orchestration framework.**  
-It is the deterministic core that orchestration tools can build on.
+```python
+from kl_kernel_logic import PsiDefinition, CAEL, CAELConfig
+
+def uppercase(text: str) -> str:
+    return text.upper()
+
+psi = PsiDefinition(
+    psi_type="text.uppercase",
+    domain="text",
+    effect="pure",
+)
+
+cael = CAEL(config=CAELConfig())
+trace = cael.execute(psi=psi, task=uppercase, text="Hello KL")
+print(trace.describe())
+```
+
+**Below you find architecture details, policy model, timeout handling, and design notes.**
 
 ## Table of Contents
 - [Overview](#overview)
@@ -542,7 +563,7 @@ Validates:
 
 ## Roadmap
 
-### v0.4.0 (Q1 2026)
+### v0.4.0
 - Extended `PolicyEngine` interface (access to envelope + context)
 - JSONL/NDJSON trace export
 - Trace schema validation (JSON Schema)

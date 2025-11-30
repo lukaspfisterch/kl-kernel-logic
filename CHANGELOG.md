@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2025-11-30
+
+### Changed
+
+- **README Refactor**: Repositioned as "deterministic substrate" instead of "framework"
+  - PyPI-optimized header with immediate install + example
+  - Reduced Use Cases from 4 to 3 focused scenarios
+  - Removed concrete timeline dates from Roadmap (only v0.4.0 kept)
+  - Refined FAQ to be clearer about alpha status (scope vs stability)
+  - Removed product-marketing language, focused on engineering value
+  
+- **Documentation Improvements**:
+  - Clarified multiprocessing behavior (Windows/macOS/Linux)
+  - Added ExecutionPolicy explanation in Policy & Audit section
+  - Enhanced Effect Classes documentation
+  
+- **pyproject.toml**: Updated description and keywords for better PyPI discoverability
+
+### Notes
+
+This is a documentation-only release. No code changes. Version bump to sync PyPI package with improved README.
+
 ## [0.3.0] - 2025-11-29
 
 ### Added
@@ -43,10 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Includes: `policy_name`, `reason`, detailed message
   - Better error context for debugging
 
-- **Test Coverage** - Comprehensive test suite (26/26 passing)
+- **Test Coverage** - Comprehensive test suite (16/16 passing)
   - Policy engine tests (6 tests for all effect types)
-  - Runtime measurement tests (4 tests for runtime_ms)
-  - Psi validation tests (6 tests for PsiDefinition validation)
   - Constraint validation tests (4 tests)
   - Foundation flow tests (3 tests)
   - Kernel and timeout tests (2 tests)
@@ -95,9 +115,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Deterministic timestamp formatting (ISO 8601: `YYYY-MM-DDTHH:MM:SS.mmmZ`)
-- `ExecutionTrace.runtime_ms` now properly calculated in Kernel.execute()
-- Timestamp precision consistent across all modules (milliseconds)
-- Multiprocessing error handling indentation bug in Kernel (line 157)
 - Envelope metadata merge edge cases
 - Test suite timing issues on Windows (multiprocessing spawn mode)
 - Example path resolution in some environments
@@ -230,7 +247,8 @@ If upgrading from v0.2.0:
 
 ---
 
-[Unreleased]: https://github.com/lukaspfisterch/kl-kernel-logic/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/lukaspfisterch/kl-kernel-logic/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/lukaspfisterch/kl-kernel-logic/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/lukaspfisterch/kl-kernel-logic/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/lukaspfisterch/kl-kernel-logic/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/lukaspfisterch/kl-kernel-logic/releases/tag/v0.1.0

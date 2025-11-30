@@ -75,7 +75,7 @@ Psi describes the essence of an operation, independent of its technical implemen
 - **psi_type**: fully qualified operation identifier (for example "foundations.poisson_1d")
 - **domain**: logical domain (for example "math", "io", "ai")
 - **effect**: execution characteristic (for example "pure", "read", "io", "external", "ai")
-- **version**: schema version (default "0.3.3")
+- **schema_version**: Psi schema version (default "1.0")
 - **constraints**: PsiConstraints for policy anchoring
 - optional **description**, **tags**, **metadata**
 

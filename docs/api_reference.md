@@ -1,6 +1,6 @@
 # KL Kernel Logic – API Reference
 
-**Version:** 0.3.3  
+**Version:** 0.3.4  
 **Package:** `kl_kernel_logic`
 
 ---
@@ -778,4 +778,4 @@ print(report.describe())
 
 ---
 
-**End of API Reference v0.3.3**
+**End of API Reference v0.3.4**

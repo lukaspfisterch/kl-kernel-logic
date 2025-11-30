@@ -1,8 +1,8 @@
 # Execution Theory in Code
 
-This document maps the abstract axioms from **[KL Execution Theory](https://github.com/lukaspfisterch/kl-execution-theory)** to concrete constructs in KL Kernel Logic.
+**The KL Execution Theory defines the minimal axioms any controlled execution system must satisfy. KL Kernel Logic is the reference implementation of these axioms.**
 
-The goal is to demonstrate that KL Kernel Logic is not an arbitrary design, but a direct implementation of a minimal, domain-neutral execution model.
+This document maps the abstract axioms from **[KL Execution Theory](https://github.com/lukaspfisterch/kl-execution-theory)** to concrete constructs in KL Kernel Logic, demonstrating that KL Kernel Logic is not an arbitrary design, but a direct implementation of a minimal, domain-neutral execution model.
 
 ---
 

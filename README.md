@@ -45,7 +45,9 @@ print(trace.describe())
 - [Tests](#tests)
 - [Theoretical Foundation](#theoretical-foundation)
 - [Roadmap](#roadmap)
+- [Contributing](#contributing)
 - [License](#license)
+- [Changelog](#changelog)
 
 ## Overview
 
@@ -63,6 +65,8 @@ KL does this by:
 The framework is domain-neutral. It does not impose business semantics. It is a binding layer for system builders and AI platform engineers.
 
 ## Core Concepts
+
+**For complete API documentation, see:** [docs/api_reference.md](docs/api_reference.md)
 
 ### Psi
 
@@ -125,6 +129,8 @@ The Controlled AI Execution Layer (CAEL):
 CAEL is the main entry point for calling the kernel with governance hooks.
 
 ## Architecture
+
+**For detailed architecture discussion, see:** [docs/01-kl-architecture.md](docs/01-kl-architecture.md)
 
 Textual overview:
 
@@ -243,7 +249,14 @@ src/kl_kernel_logic/
 
 tests/
 docs/
+    api_reference.md
+    execution_theory_in_code.md
+    01-kl-architecture.md
+    02-foundational-operations.md
+    roadmap.md
 ```
+
+### Core Modules
 
 - **psi.py** - PsiDefinition and PsiConstraints
 - **psi_envelope.py** - versioned envelope
@@ -253,6 +266,14 @@ docs/
 - **policy.py** - PolicyEngine, PolicyDecision, DefaultSafePolicyEngine
 - **audit.py** - AuditReport and builder
 - **examples_foundations** - deterministic reference operations
+
+### Documentation
+
+- **[api_reference.md](docs/api_reference.md)** - Complete API reference for 0.3.x
+- **[execution_theory_in_code.md](docs/execution_theory_in_code.md)** - Theory to code mapping
+- **[01-kl-architecture.md](docs/01-kl-architecture.md)** - Architecture overview
+- **[02-foundational-operations.md](docs/02-foundational-operations.md)** - Foundation examples guide
+- **[roadmap.md](docs/roadmap.md)** - Development roadmap
 
 ## Installation
 
@@ -276,10 +297,19 @@ pip install -e .
 
 ## Quick Start
 
-Minimal end to end:
+### Two Execution Modes
+
+KL provides two execution modes:
+
+#### 1. CAEL (Recommended for Production)
+
+Use **CAEL** when you need:
+- Policy evaluation and enforcement
+- User context and request tracking
+- Production-grade execution with governance
 
 ```python
-from kl_kernel_logic import PsiDefinition, CAEL, CAELConfig
+from kl_kernel_logic import CAEL, CAELConfig, PsiDefinition, ExecutionContext, ExecutionPolicy
 
 def add(a: int, b: int) -> int:
     return a + b
@@ -290,14 +320,48 @@ psi = PsiDefinition(
     effect="pure",
 )
 
+ctx = ExecutionContext(
+    user_id="user_123",
+    request_id="req_456",
+    policy=ExecutionPolicy(timeout_seconds=1.0),
+)
+
 cael = CAEL(config=CAELConfig())
-trace = cael.execute(psi=psi, task=add, a=1, b=2)
+trace = cael.execute(psi=psi, task=add, ctx=ctx, a=1, b=2)
 
 print(trace.output)          # 3
 print(trace.success)         # True
 print(trace.runtime_ms)      # float
-print(trace.psi.describe())  # dict representation
 ```
+
+#### 2. Kernel (Low-Level)
+
+Use **Kernel** directly when you need:
+- Full control without policy layer
+- Testing and development
+- Building custom orchestrators
+
+```python
+from kl_kernel_logic import Kernel, PsiDefinition
+
+def add(a: int, b: int) -> int:
+    return a + b
+
+psi = PsiDefinition(
+    psi_type="math.add",
+    domain="math",
+    effect="pure",
+)
+
+kernel = Kernel()
+trace = kernel.execute(psi=psi, task=add, a=1, b=2)
+
+print(trace.output)          # 3
+print(trace.success)         # True
+print(trace.runtime_ms)      # float
+```
+
+**Recommendation:** Start with **CAEL** for production. Use **Kernel** for testing or when building custom execution layers.
 
 ## Foundations Examples
 
@@ -308,6 +372,8 @@ The `examples_foundations` module contains deterministic operations such as:
 - Simple trajectory integration
 
 They are used in the test suite and serve as reference operations.
+
+**See also:** [docs/02-foundational-operations.md](docs/02-foundational-operations.md) for detailed examples and patterns.
 
 ## Tests
 
@@ -344,17 +410,28 @@ A separate document describes how these axioms map to the implementation:
 
 ## Roadmap
 
-The alpha versions focus on:
+### Current Focus (0.3.x)
 
-- keeping the core small and stable
-- preserving clear public contracts
-- providing reference examples for deterministic operations
+- Maintaining API stability
+- Bug fixes and polish
+- Enhanced documentation and examples
+- CI/CD automation
 
-Future work will explore:
+### Near Future (0.4.0)
 
-- richer policy evaluation over full trace sequences
-- standardised trace formats (for example JSONL)
-- optional helpers for AI / model execution
+- Richer PolicyEngine interface with context and history
+- G(V) governance over trace sequences
+- Standardized trace export (JSONL, NDJSON)
+- Optional constraint validation
+
+### Long Term (0.5.0+)
+
+- Enterprise extensions as separate packages
+- Async execution support
+- Observability integrations
+- Production-scale features
+
+**See:** [docs/roadmap.md](docs/roadmap.md) for complete roadmap, versioning strategy, and non-goals.
 
 ## Contributing
 
@@ -373,3 +450,7 @@ For bug reports and feature requests, please use the [GitHub Issues](https://git
 MIT License. See [LICENSE](LICENSE) for details.
 
 Copyright (c) 2025 Lukas Pfister
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history and migration notes.

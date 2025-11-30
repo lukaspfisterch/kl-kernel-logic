@@ -1,15 +1,16 @@
 """
 KL Kernel Logic core package.
 
-Exposes the main building blocks for defining and executing operations
-under the KL model.
+Exposes the fundamental building blocks for defining and executing
+operations in the KL model. This module provides the stable public API
+for Psi definitions, envelopes, execution, policy, and audit.
 """
 
 # Psi layer
 from .psi import PsiDefinition, PsiConstraints
 from .psi_envelope import PsiEnvelope
 
-# Kernel & CAEL
+# Kernel and CAEL
 from .kernel import Kernel, ExecutionTrace
 from .cael import CAEL, CAELConfig, PolicyViolationError
 
@@ -20,11 +21,11 @@ from .policy import (
     DefaultSafePolicyEngine,
 )
 
+# Execution context
+from .execution_context import ExecutionPolicy, ExecutionContext
+
 # Audit reporting
 from .audit import AuditReport, build_audit_report
-
-# Execution context (identity + per-request constraints)
-from .execution_context import ExecutionPolicy, ExecutionContext
 
 
 __all__ = [
@@ -45,14 +46,13 @@ __all__ = [
     "PolicyEngine",
     "DefaultSafePolicyEngine",
 
-    # Audit
-    "AuditReport",
-    "build_audit_report",
-
     # Execution context
     "ExecutionPolicy",
     "ExecutionContext",
+
+    # Audit
+    "AuditReport",
+    "build_audit_report",
 ]
 
-
-__version__ = "0.3.1"
+__version__ = "0.3.3"

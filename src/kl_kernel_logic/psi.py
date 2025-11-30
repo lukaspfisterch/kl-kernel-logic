@@ -1,58 +1,117 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Any
 
-#
-# Allowed value sets for constraints.
-# These are intentionally small and can be extended over time.
-#
 
-ALLOWED_SCOPE_VALUES = {
+"""
+Psi layer for KL Kernel Logic.
+
+Defines:
+- canonical constraint constants (ALLOWED_*_VALUES)
+- PsiConstraints: governance anchor for a PsiDefinition
+- PsiDefinition: declarative description of an operation
+
+Public methods kept minimal but compatible with tests:
+- PsiConstraints.validate()
+- PsiConstraints.is_empty()
+- PsiDefinition.assert_minimal_valid()
+- PsiDefinition.psi_key()
+- PsiDefinition.describe()
+"""
+
+
+# ---------------------------------------------------------------------------
+# Canonical constraint domains (imported by tests)
+# ---------------------------------------------------------------------------
+
+ALLOWED_SCOPE_VALUES: Tuple[str, ...] = (
     "local",
     "session",
-    "tenant",
-    "cluster",
-}
+    "system",
+)
 
-ALLOWED_FORMAT_VALUES = {
-    "json",
-    "ndjson",
-    "binary",
+ALLOWED_FORMAT_VALUES: Tuple[str, ...] = (
+    "opaque",
     "text",
-}
+    "json",
+)
 
-ALLOWED_TEMPORAL_VALUES = {
-    "stateless",
-    "session",
-    "window",
-}
+ALLOWED_TEMPORAL_VALUES: Tuple[str, ...] = (
+    "instant",
+    "bounded",
+    "stream",
+)
 
-ALLOWED_REVERSIBILITY_VALUES = {
+ALLOWED_REVERSIBILITY_VALUES: Tuple[str, ...] = (
     "reversible",
     "irreversible",
-    "logged-only",
-}
+)
 
+
+# ---------------------------------------------------------------------------
+# PsiConstraints – governance anchor
+# ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class PsiConstraints:
     """
-    Structured constraint block attached to a PsiDefinition.
+    Governance anchor for a PsiDefinition.
 
-    The primary role is to provide stable anchor points for policy
-    evaluation without bloating the core contract. Validation is
-    explicit and opt-in via `validate()`.
+    All fields are optional. When present, they are validated
+    against the corresponding ALLOWED_*_VALUES constants.
+
+    Important:
+    - Construction never raises.
+    - validate() performs the checks and may raise ValueError.
     """
 
     scope: Optional[str] = None
     format: Optional[str] = None
     temporal: Optional[str] = None
     reversibility: Optional[str] = None
-    extra: Dict[str, Any] = field(default_factory=dict)
+    extra: Dict[str, str] = field(default_factory=dict)
+
+    def validate(self) -> None:
+        """
+        Validate the constraint values against the canonical sets.
+
+        Raises:
+            ValueError if any field contains an invalid value.
+        """
+        if self.scope is not None and self.scope not in ALLOWED_SCOPE_VALUES:
+            raise ValueError(
+                f"Invalid constraint scope: '{self.scope}'. "
+                f"Allowed: {ALLOWED_SCOPE_VALUES}"
+            )
+
+        if self.format is not None and self.format not in ALLOWED_FORMAT_VALUES:
+            raise ValueError(
+                f"Invalid constraint format: '{self.format}'. "
+                f"Allowed: {ALLOWED_FORMAT_VALUES}"
+            )
+
+        if self.temporal is not None and self.temporal not in ALLOWED_TEMPORAL_VALUES:
+            raise ValueError(
+                f"Invalid temporal '{self.temporal}'. "
+                f"Allowed: {ALLOWED_TEMPORAL_VALUES}"
+            )
+
+        if (
+            self.reversibility is not None
+            and self.reversibility not in ALLOWED_REVERSIBILITY_VALUES
+        ):
+            raise ValueError(
+                f"Invalid reversibility '{self.reversibility}'. "
+                f"Allowed: {ALLOWED_REVERSIBILITY_VALUES}"
+            )
 
     def is_empty(self) -> bool:
-        """Return True if no primary constraint field is set."""
+        """
+        Return True if no constraint field is set.
+
+        Used by tests to distinguish 'no constraints' from 'constrained'.
+        """
         return (
             self.scope is None
             and self.format is None
@@ -61,47 +120,9 @@ class PsiConstraints:
             and not self.extra
         )
 
-    def validate(self) -> None:
+    def to_dict(self) -> Dict[str, Any]:
         """
-        Validate constraint values against the allowed sets.
-
-        This method does not get called implicitly by the Kernel.
-        It is intended for CAEL, policy adapters or configuration
-        loaders that want to enforce stricter contracts.
-        """
-        if self.scope is not None and self.scope not in ALLOWED_SCOPE_VALUES:
-            raise ValueError(
-                f"Invalid constraint scope '{self.scope}'. "
-                f"Allowed: {sorted(ALLOWED_SCOPE_VALUES)}"
-            )
-
-        if self.format is not None and self.format not in ALLOWED_FORMAT_VALUES:
-            raise ValueError(
-                f"Invalid constraint format '{self.format}'. "
-                f"Allowed: {sorted(ALLOWED_FORMAT_VALUES)}"
-            )
-
-        if self.temporal is not None and self.temporal not in ALLOWED_TEMPORAL_VALUES:
-            raise ValueError(
-                f"Invalid constraint temporal '{self.temporal}'. "
-                f"Allowed: {sorted(ALLOWED_TEMPORAL_VALUES)}"
-            )
-
-        if (
-            self.reversibility is not None
-            and self.reversibility not in ALLOWED_REVERSIBILITY_VALUES
-        ):
-            raise ValueError(
-                f"Invalid constraint reversibility '{self.reversibility}'. "
-                f"Allowed: {sorted(ALLOWED_REVERSIBILITY_VALUES)}"
-            )
-
-    def describe(self) -> Dict[str, Any]:
-        """
-        Serialisable representation of the constraint block.
-
-        Used by audit and telemetry components. This is deliberately
-        shallow and mirrors the public fields.
+        JSON-serializable representation of the constraints.
         """
         return {
             "scope": self.scope,
@@ -111,69 +132,114 @@ class PsiConstraints:
             "extra": dict(self.extra),
         }
 
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]) -> "PsiConstraints":
+        """
+        Construct constraints from a previously serialized dict.
+        """
+        if not data:
+            return cls()
+        return cls(
+            scope=data.get("scope"),
+            format=data.get("format"),
+            temporal=data.get("temporal"),
+            reversibility=data.get("reversibility"),
+            extra=dict(data.get("extra") or {}),
+        )
+
+
+# ---------------------------------------------------------------------------
+# PsiDefinition – declarative operation description
+# ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class PsiDefinition:
     """
-    Declarative definition of an operation in the KL Kernel.
+    Declarative description of an operation under the KL model.
 
-    PsiDefinition describes WHAT should be executed, not HOW.
-    It is intentionally domain agnostic and kept small to remain stable
-    as a long lived contract between callers, CAEL and the Kernel.
+    Fields:
+    - psi_type: fully qualified logical identifier of the operation
+    - domain: logical domain (e.g. "math", "io", "ai")
+    - effect: execution effect class (e.g. "pure", "read", "io", "external", "ai")
+    - version: schema version of this Psi definition (default: "0.3.3")
+    - constraints: PsiConstraints instance used for governance anchoring
+    - description, tags, metadata: optional descriptive fields
     """
 
-    # Identity and logical binding
-    psi_type: str                         # e.g. "foundations.poisson_1d"
-    domain: str                           # e.g. "math", "governance", "io"
-    effect: str                           # e.g. "pure", "io", "external", "ai"
-
-    # Versioning and human context
-    version: str = "0.3.0"
-    description: Optional[str] = None
-
-    # Governance and policy anchor
+    psi_type: str
+    domain: str
+    effect: str
+    version: str = "0.3.3"
     constraints: PsiConstraints = field(default_factory=PsiConstraints)
-
-    # Non critical metadata
+    description: Optional[str] = None
     tags: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, str] = field(default_factory=dict)
 
-    def psi_key(self) -> str:
-        """
-        Stable logical key used by registries and orchestrators.
-
-        Combines type and version. Version can later be mapped or pinned
-        by higher level components (e.g. "latest:stable").
-        """
-        return f"{self.psi_type}@{self.version}"
+    # ------------------------------------------------------------------
+    # Core helpers
+    # ------------------------------------------------------------------
 
     def assert_minimal_valid(self) -> None:
         """
-        Local sanity check for construction time.
+        Minimal validity checks for a PsiDefinition.
 
-        Raises ValueError if required identity fields are missing or malformed.
-        This is intentionally light weight and kept free of IO or external calls.
+        Required:
+        - psi_type must be non-empty
+        - domain must be non-empty
+        - effect must be non-empty
         """
         if not self.psi_type:
-            raise ValueError("PsiDefinition.psi_type must not be empty")
+            raise ValueError("psi_type must not be empty")
         if not self.domain:
-            raise ValueError("PsiDefinition.domain must not be empty")
+            raise ValueError("domain must not be empty")
         if not self.effect:
-            raise ValueError("PsiDefinition.effect must not be empty")
+            raise ValueError("effect must not be empty")
+
+    def psi_key(self) -> str:
+        """
+        Stable key for identifying this PsiDefinition.
+
+        Combines psi_type and version.
+        """
+        return f"{self.psi_type}@{self.version}"
 
     def describe(self) -> Dict[str, Any]:
         """
-        Serialisable representation of the Psi definition.
+        Human/audit oriented representation of this PsiDefinition.
 
-        This is used by ExecutionTrace.describe() and audit helpers.
+        For now, identical to to_dict(), but kept as a separate method
+        for clarity and compatibility with existing callers.
+        """
+        return self.to_dict()
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Lossless, JSON-serializable representation of this PsiDefinition.
         """
         return {
             "psi_type": self.psi_type,
             "domain": self.domain,
             "effect": self.effect,
             "version": self.version,
+            "constraints": self.constraints.to_dict(),
             "description": self.description,
-            "constraints": self.constraints.describe(),
             "tags": list(self.tags),
             "metadata": dict(self.metadata),
         }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "PsiDefinition":
+        """
+        Reconstruct a PsiDefinition from a dict produced by to_dict().
+        """
+        constraints_data = data.get("constraints") or {}
+        return cls(
+            psi_type=data["psi_type"],
+            domain=data["domain"],
+            effect=data["effect"],
+            version=data.get("version", "0.3.3"),
+            constraints=PsiConstraints.from_dict(constraints_data),
+            description=data.get("description"),
+            tags=list(data.get("tags") or []),
+            metadata=dict(data.get("metadata") or {}),
+        )

@@ -1,8 +1,8 @@
-# Foundational operations for KL Kernel Logic
+# Foundational Execution Patterns
 
-The foundational operations show how KL can describe and control deterministic computational steps before any broader orchestrator is built.
+Foundational execution patterns demonstrate how KL can describe and control deterministic computational steps before any broader orchestrator is built.
 
-This document extends the concepts from the main README by providing concrete foundational operations used to exercise Psi, CAEL and the Kernel.
+This document extends the concepts from the main README by providing concrete execution patterns used to exercise Psi, CAEL and the Kernel.
 
 
 We use three examples:
@@ -192,7 +192,7 @@ The result bundle can be logged or passed to higher level components that expect
 
 ## Trace and audit expectations
 
-For all foundational operations:
+For all foundational execution patterns:
 
 - `start`: `stage="start"`, includes at least `user_id` and `request_id`, optionally input size
 - `end`: `stage="end"`, includes `result_type`, optionally shape or length
@@ -200,7 +200,7 @@ For all foundational operations:
 
 ## Minimum tests
 
-For each foundational operation:
+For each foundational execution pattern:
 
 - Policy denial: network or filesystem forbidden leads to `PermissionError`
 - Determinism: fixed input leads to fixed output (golden assertions)
@@ -209,6 +209,6 @@ For each foundational operation:
 
 ## Scope and intent
 
-The foundational operations are scaffolding to exercise Psi, CAEL and the Kernel on deterministic, inspectable tasks.
+The foundational execution patterns are scaffolding to exercise Psi, CAEL and the Kernel on deterministic, inspectable tasks.
 
 They provide a safe base for higher level orchestrator work before external systems are introduced. They are not production grade solvers. The goal is to demonstrate the execution grammar and observable behaviour of KL.

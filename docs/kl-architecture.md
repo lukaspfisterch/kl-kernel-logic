@@ -1,12 +1,14 @@
-# KL – Kernel Logic Architecture
+# KL Architecture
 
 KL is a lightweight architectural model for structured AI execution in technical systems.
 It focuses on the logical form of an AI operation and on the controlled execution path that follows from it.
 
+KL implements **KL Execution Theory v1.0**, a formal execution model based on the 5-element chain: Δ → V → t → G(V) → SS.
+
 KL consists of two complementary layers:
 
-- **Psi**: the Principle Layer, describes what an operation is
-- **CAEL**: the Controlled AI Execution Layer, describes how an operation is carried out
+- **Psi**: the Principle Layer, describes what an operation is (defines Δ)
+- **CAEL**: the Controlled AI Execution Layer, describes how an operation is carried out (executes Δ, produces V and SS)
 
 ---
 
@@ -66,7 +68,35 @@ This combined record can be logged, stored, or inspected as part of a larger AI 
 
 ---
 
-## 4. Extension points
+## 4. Theoretical Foundation
+
+KL Kernel Logic implements **KL Execution Theory v1.0**, a formal 5-element execution chain:
+
+```
+Δ → V → t → G(V) → SS
+```
+
+**Architecture-to-Theory Mapping:**
+
+| Theory Element | KL Architecture Component |
+|----------------|---------------------------|
+| Δ (Atomic transition) | `Kernel.execute()` call |
+| V (Behaviour sequence) | Sequence of `ExecutionTrace` objects |
+| t (Logical time) | Trace list index + timing metadata |
+| G(V) (Governance function) | `PolicyEngine` + CAEL policy evaluation |
+| SS (Shadow State) | `ExecutionTrace` + `AuditReport` + persistence |
+
+**Layer Mapping:**
+
+- **Psi layer** defines the intent of Δ (what will be transitioned)
+- **CAEL layer** executes Δ under governance G(V)
+- **Kernel** produces V (behaviour) and SS (shadow state)
+
+The architecture is a direct realization of the theory. See [kl_execution_theory_v1.md](kl_execution_theory_v1.md) for the complete formal specification.
+
+---
+
+## 5. Extension Points
 
 KL is intentionally small.
 Typical extension points:

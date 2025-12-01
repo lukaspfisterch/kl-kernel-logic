@@ -1,19 +1,21 @@
 # KL Kernel Logic – Roadmap
 
-**Version 0.3.3 • Minimal Core • Theory Aligned**
+**Version 0.3.4 • Minimal Core • Theory v1.0 Complete**
 
 ---
 
-## 1. Status v0.3.3
+## 1. Status v0.3.4
 
-**Focus:** Stable baseline
+**Focus:** v1.0-ready documentation and stable implementation
 
 - ~700 LOC core
 - Zero external dependencies
 - Kernel + CAEL stable
-- API Reference and Theory Mapping consistent
+- **KL Execution Theory v1.0 integrated** (definitive 5-element chain)
+- API Reference and Theory Mapping complete
 - Test suite passing (26/26)
 - Public API frozen for 0.3.x line
+- Documentation layer at version-ready quality
 
 ---
 
@@ -21,16 +23,19 @@
 
 **Goal:** Stability, clean surface, no feature creep.
 
-### v0.3.4
+### v0.3.4 (Current)
 
-- Small examples in repo
-- Clearer error messages
-- Documentation polish
+- **KL Execution Theory v1.0 integration** (5-element chain: Δ → V → t → G(V) → SS)
+- New documentation: `docs/kl_execution_theory_v1.md` (definitive formal specification)
+- Updated theory-to-code mapping in `docs/execution_theory_in_code.md`
+- README updated with domain-agnostic validation summary
+- Architecture documentation aligned with theory
 
-### v0.3.5
+### v0.3.5+
 
 - Bug fixes
 - Minor optimizations, no new concepts
+- Community feedback integration
 
 ---
 
@@ -85,10 +90,14 @@
 
 ## Versioning
 
-- **0.3.x** – Stability series (API frozen)
+- **0.3.x** – Stability series (API frozen, theory v1.0 integrated)
 - **0.4.x** – Governance extensions (backward-compatible)
 - **0.5.x** – Optional utilities (separate packages)
-- **1.0.0** – When API proven stable in production use
+- **1.0.0** – API proven stable in production use
+
+**Path to 1.0.0:**
+
+KL Kernel Logic is approaching 1.0.0 readiness. The theoretical foundation is complete (KL Execution Theory v1.0), the implementation is stable, and the documentation layer reflects version-ready quality. The transition to 1.0.0 will occur when the API has been validated in production environments and community feedback confirms stability.
 
 ---
 
@@ -108,5 +117,5 @@
 
 ---
 
-**Last Updated:** 2025-11-30  
+**Last Updated:** 2025-12-01  
 **Next Review:** Q1 2026

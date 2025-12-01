@@ -1,30 +1,36 @@
 # Execution Theory in Code
 
-**The KL Execution Theory defines the minimal axioms any controlled execution system must satisfy. KL Kernel Logic is the reference implementation of these axioms.**
+**KL Execution Theory v1.0 defines the minimal 5-element chain for deterministic, auditable execution. KL Kernel Logic is the reference implementation of this theory.**
 
-This document maps the abstract axioms from **[KL Execution Theory](https://github.com/lukaspfisterch/kl-execution-theory)** to concrete constructs in KL Kernel Logic, demonstrating that KL Kernel Logic is not an arbitrary design, but a direct implementation of a minimal, domain-neutral execution model.
+This document maps the abstract 5-element chain (Δ → V → t → G(V) → SS) to concrete constructs in KL Kernel Logic, demonstrating that KL Kernel Logic is not an arbitrary design, but a direct implementation of a minimal, domain-neutral execution model.
+
+**See also:** [kl_execution_theory_v1.md](kl_execution_theory_v1.md) for the complete formal specification.
 
 ---
 
 ## Overview
 
-**KL Execution Theory** defines five axioms:
+**KL Execution Theory v1.0** defines the 5-element execution chain:
 
-1. **Δ (Delta)** - Atomic state transitions
+```
+Δ → V → t → G(V) → SS
+```
+
+1. **Δ (Delta)** - Atomic state transition
 2. **V (Behaviour)** - Ordered sequence of transitions
-3. **t (Time)** - Logical time as index
-4. **G (Governance)** - Derived policy evaluation
-5. **L (Boundaries)** - Derived constraint geometry
+3. **t (Time)** - Logical time derived from position in V
+4. **G(V) (Governance)** - Policy function evaluated over behaviour
+5. **SS (Shadow State)** - Derived audit state from governance evaluation
 
 **KL Kernel Logic** implements these as Python constructs:
 
-| Axiom | Code Manifestation |
-|-------|-------------------|
+| Element | Code Manifestation |
+|---------|-------------------|
 | Δ | `Kernel.execute()` call |
 | V | Sequence of `ExecutionTrace` objects |
-| t | `runtime_ms`, `started_at`, `finished_at` |
-| G | `PolicyEngine.evaluate()` + `PolicyDecision` |
-| L | `ExecutionPolicy` + `DefaultSafePolicyEngine` |
+| t | List index + `runtime_ms`, `started_at`, `finished_at` |
+| G(V) | `PolicyEngine.evaluate()` + governance over trace sequences |
+| SS | `ExecutionTrace` records + `AuditReport` + trace persistence |
 
 ---
 
@@ -164,16 +170,16 @@ for t, trace in enumerate(traces):
 
 ---
 
-## 4. G (Governance)
+## 4. G(V) (Governance Function)
 
 ### Theory
 
-From `axioms/04_governance.md`:
+From KL Execution Theory v1.0:
 
 ```
-G = f(V)
+G : V → D
 
-Governance is a function over behaviour.
+Governance is a function that evaluates the entire behaviour sequence V and produces a decision D.
 - Non-executing (does not modify V)
 - Behaviour-derived (depends only on V)
 - Deterministic evaluation (same V → same decision)
@@ -232,89 +238,123 @@ def evaluate_behaviour(traces: List[ExecutionTrace]) -> bool:
 
 ---
 
-## 5. L (Boundaries)
+## 5. SS (Shadow State)
 
 ### Theory
 
-From `axioms/05_boundaries.md`:
+From KL Execution Theory v1.0:
 
 ```
-L = g(V)
+SS = G(V) evaluated and persisted
 
-Boundaries describe which regions of behaviour are permitted or forbidden.
-- Behaviour-derived (computed from V)
-- Non-executing (does not enforce, only describes)
-- Structural (geometry of constraints)
+The Shadow State is the derived governance state that emerges from applying 
+the governance function G over the behaviour V.
+- Derived (computed from V via G)
+- Persistent (recorded for audit, replay, compliance)
+- Non-executing (does not affect future execution)
+- Complete (captures all governance decisions)
 ```
 
 ### Implementation
 
-In KL, boundaries are expressed through:
+In KL, Shadow State is expressed through:
 
-1. **`ExecutionPolicy`** - per-request constraint flags
-2. **`PsiConstraints`** - declarative governance anchors
-3. **`DefaultSafePolicyEngine`** - effect-based safe/unsafe regions
+1. **`ExecutionTrace`** - records each Δ with governance metadata
+2. **`AuditReport`** - aggregates governance data
+3. **`PolicyDecision`** - embedded governance decisions
+4. **Trace persistence** - external storage for audit
 
-**Example 1: ExecutionPolicy boundaries**
+**Example 1: Shadow State in ExecutionTrace**
 
 ```python
-from kl_kernel_logic import ExecutionPolicy
+from kl_kernel_logic import Kernel, PsiDefinition
 
-# Define constraint boundaries
-policy = ExecutionPolicy(
-    allow_network=False,        # Boundary: no external calls
-    allow_filesystem=False,     # Boundary: no IO operations
-    timeout_seconds=5.0         # Boundary: time limit
+psi = PsiDefinition(
+    psi_type="math.add",
+    domain="math",
+    effect="pure"
 )
 
-# These flags describe the allowed region of behaviour
-# Enforcement is separate (in CAEL or orchestrator)
+kernel = Kernel()
+trace = kernel.execute(psi=psi, task=lambda a, b: a + b, a=1, b=2)
+
+# trace is part of Shadow State - it records:
+# - What was executed (psi)
+# - What was the result (output)
+# - When it happened (started_at, finished_at)
+# - How long it took (runtime_ms)
+# - Whether it succeeded (success)
 ```
 
-**Example 2: Effect-based boundaries**
+**Example 2: Shadow State with governance**
 
 ```python
-# DefaultSafePolicyEngine defines effect boundaries:
+from kl_kernel_logic import CAEL, CAELConfig, ExecutionContext, ExecutionPolicy
 
-ALLOWED_REGION = {"pure", "read", "ai"}
-FORBIDDEN_REGION = {"io", "external"}
-
-# A PsiDefinition with effect="pure" is inside the allowed region
-# A PsiDefinition with effect="io" is inside the forbidden region
-```
-
-**Example 3: Constraint boundaries**
-
-```python
-from kl_kernel_logic import PsiConstraints
-
-constraints = PsiConstraints(
-    scope="local",              # Boundary: cannot access system-wide state
-    format="json",              # Boundary: must produce JSON output
-    temporal="bounded",         # Boundary: must complete in finite time
-    reversibility="reversible"  # Boundary: must be undoable
+psi = PsiDefinition(
+    psi_type="io.write",
+    domain="io",
+    effect="io"
 )
+
+ctx = ExecutionContext(
+    user_id="user_123",
+    policy=ExecutionPolicy(allow_filesystem=False)
+)
+
+cael = CAEL(config=CAELConfig())
+
+try:
+    trace = cael.execute(psi=psi, task=some_io_task, ctx=ctx)
+except PolicyViolationError as exc:
+    # The policy decision is part of Shadow State
+    # It records: what was attempted, why it was blocked, when
+    pass
+```
+
+**Example 3: Shadow State aggregation**
+
+```python
+from kl_kernel_logic import build_audit_report
+
+# V - behaviour sequence
+traces = [trace_0, trace_1, trace_2]
+
+# SS - shadow state for each trace
+for trace in traces:
+    report = build_audit_report(trace)
+    # report contains:
+    # - run_id
+    # - trace details (psi, output, timing)
+    # - generated_at timestamp
+    # Store report for compliance/audit
 ```
 
 **Properties preserved:**
 
-- **Behaviour-derived**: Boundaries are evaluated based on observable properties (effect, constraints, policy flags).
-- **Non-executing**: `ExecutionPolicy` and `PsiConstraints` do not enforce limits themselves. They describe them. Enforcement happens in CAEL or orchestrator.
-- **Structural**: Boundaries define geometry (inside/outside allowed regions), not procedural logic.
+- **Derived**: Shadow State is computed from execution traces via governance evaluation.
+- **Persistent**: Traces and audit reports can be stored externally (JSONL, database).
+- **Non-executing**: Shadow State observes and records, does not command.
+- **Complete**: All governance decisions, policy evaluations, and execution outcomes are captured.
 
-**Boundary evaluation over sequences:**
+**Shadow State evaluation over sequences:**
 
 ```python
-def evaluate_boundaries(traces: List[ExecutionTrace]) -> Dict[str, Any]:
-    """L(V) - boundary analysis over behaviour."""
+def analyze_shadow_state(traces: List[ExecutionTrace]) -> Dict[str, Any]:
+    """Analyze Shadow State (governance record) from behaviour V."""
     total_runtime = sum(trace.runtime_ms for trace in traces)
     effects_used = {trace.psi.effect for trace in traces}
+    success_count = sum(1 for trace in traces if trace.success)
     
     return {
+        "total_transitions": len(traces),
+        "successful_transitions": success_count,
         "total_runtime_ms": total_runtime,
         "effects_used": effects_used,
-        "within_time_budget": total_runtime < 10000,  # 10s limit
-        "within_effect_boundary": effects_used <= {"pure", "read", "ai"}
+        "governance_compliant": all(
+            trace.psi.effect in {"pure", "read", "ai"} 
+            for trace in traces
+        )
     }
 ```
 
@@ -322,16 +362,16 @@ def evaluate_boundaries(traces: List[ExecutionTrace]) -> Dict[str, Any]:
 
 ## Tests as Proofs
 
-The test suite validates that the implementation preserves the axiom properties:
+The test suite validates that the implementation preserves the 5-element chain properties:
 
 | Test File | Validates |
 |-----------|-----------|
 | `test_kernel_basic.py` | Δ properties (atomicity, determinism, exception capture) |
 | `test_foundations_flows.py` | V construction (ordered sequences, composition) |
 | `test_runtime_ms.py` | t measurement (timing, logical ordering) |
-| `test_policy_templates.py` | G evaluation (policy decisions, determinism) |
-| `test_constraints.py` | L validation (constraint checking, boundary geometry) |
-| `test_audit_report.py` | Trace capture (completeness, serialization) |
+| `test_policy_templates.py` | G(V) evaluation (policy decisions, determinism) |
+| `test_audit_report.py` | SS capture (trace completeness, serialization, audit records) |
+| `test_constraints.py` | Constraint validation (governance anchoring) |
 
 ---
 
@@ -349,11 +389,12 @@ Governance can be evaluated **without re-executing** the behaviour.
 
 ### 3. Domain Portability
 
-The same abstract structure applies across domains:
+The same 5-element chain applies across domains:
 
-- **Finance**: Order = Δ, Order book history = V, Risk check = G, Position limits = L
-- **Biology**: Reaction = Δ, Reaction pathway = V, Conservation law = G, Concentration bounds = L
-- **AI**: Inference = Δ, Inference chain = V, Safety policy = G, Model usage limits = L
+- **Finance**: Order = Δ, Order book = V, t = trade sequence index, Risk check = G(V), Audit log = SS
+- **Biology**: Reaction = Δ, Pathway = V, t = reaction sequence index, Conservation law = G(V), Lab record = SS
+- **AI**: Inference = Δ, Inference chain = V, t = call sequence index, Safety policy = G(V), Inference trace = SS
+- **Computation**: Function call = Δ, Call stack = V, t = execution index, Resource policy = G(V), Execution log = SS
 
 KL Kernel Logic provides a **domain-neutral substrate** for all these cases.
 
@@ -361,9 +402,10 @@ KL Kernel Logic provides a **domain-neutral substrate** for all these cases.
 
 The theory provides:
 
-- **Axioms** that define what deterministic execution means
-- **Proofs** that properties like replayability emerge from the axioms
-- **Test suite** that validates implementation preserves axiom properties
+- **5-element chain** (Δ → V → t → G(V) → SS) that defines deterministic execution
+- **Formal specification** in [docs/kl_execution_theory_v1.md](kl_execution_theory_v1.md)
+- **Properties** that emerge from the chain (replayability, auditability, determinism)
+- **Test suite** that validates implementation preserves chain properties
 
 This is not accidental design. It's **axiomatic engineering**.
 
@@ -371,7 +413,7 @@ This is not accidental design. It's **axiomatic engineering**.
 
 ## Summary
 
-KL Kernel Logic is a **concrete realization** of KL Execution Theory:
+KL Kernel Logic is a **concrete realization** of KL Execution Theory v1.0:
 
 | **Abstraction** | **Realization** |
 |-----------------|-----------------|
@@ -379,16 +421,22 @@ KL Kernel Logic is a **concrete realization** of KL Execution Theory:
 | Δ (atomic transition) | `Kernel.execute()` call |
 | V (behaviour) | `List[ExecutionTrace]` |
 | t (logical time) | List index + `runtime_ms` |
-| T (trace) | `ExecutionTrace` object |
-| G (governance) | `PolicyEngine` + evaluation functions |
-| L (boundaries) | `ExecutionPolicy` + `PsiConstraints` |
+| G(V) (governance function) | `PolicyEngine` + evaluation over trace sequences |
+| SS (shadow state) | `ExecutionTrace` + `AuditReport` + trace persistence |
+
+The 5-element chain is fully implemented:
+
+```
+Δ → V → t → G(V) → SS
+```
 
 This is not an implementation detail. It's the **design principle**.
 
 The theory guarantees:
-- Determinism
-- Replayability
-- Auditability
+- Deterministic execution
+- Replayable behaviour
+- Complete auditability
+- Transparent governance
 - Domain neutrality
 
 The code delivers on that guarantee.

@@ -130,7 +130,7 @@ CAEL is the main entry point for calling the kernel with governance hooks.
 
 ## Architecture
 
-**For detailed architecture discussion, see:** [docs/01-kl-architecture.md](docs/01-kl-architecture.md)
+**For detailed architecture discussion, see:** [docs/kl-architecture.md](docs/kl-architecture.md)
 
 Textual overview:
 
@@ -251,8 +251,8 @@ tests/
 docs/
     api_reference.md
     execution_theory_in_code.md
-    01-kl-architecture.md
-    02-foundational-operations.md
+    kl-architecture.md
+    foundational-execution-patterns.md
     roadmap.md
 ```
 
@@ -271,8 +271,8 @@ docs/
 
 - **[api_reference.md](docs/api_reference.md)** - Complete API reference for 0.3.x
 - **[execution_theory_in_code.md](docs/execution_theory_in_code.md)** - Theory to code mapping
-- **[01-kl-architecture.md](docs/01-kl-architecture.md)** - Architecture overview
-- **[02-foundational-operations.md](docs/02-foundational-operations.md)** - Foundation examples guide
+- **[kl-architecture.md](docs/kl-architecture.md)** - Architecture overview
+- **[foundational-execution-patterns.md](docs/foundational-execution-patterns.md)** - Foundational execution patterns guide
 - **[roadmap.md](docs/roadmap.md)** - Development roadmap
 
 ## Installation
@@ -373,7 +373,7 @@ The `examples_foundations` module contains deterministic operations such as:
 
 They are used in the test suite and serve as reference operations.
 
-**See also:** [docs/02-foundational-operations.md](docs/02-foundational-operations.md) for detailed examples and patterns.
+**See also:** [docs/foundational-execution-patterns.md](docs/foundational-execution-patterns.md) for detailed examples and patterns.
 
 ## Tests
 
@@ -394,19 +394,32 @@ The suite covers:
 
 ## Theoretical Foundation
 
-**The KL Execution Theory defines the minimal axioms any controlled execution system must satisfy. KL Kernel Logic is the reference implementation of these axioms.**
+**KL Kernel Logic is the reference implementation of KL Execution Theory, a minimal and domain-agnostic execution model.**
 
-The theory defines five core axioms:
+### The 5-Element Execution Chain
 
-- **Δ** (atomic transitions)
-- **V** (behaviour sequences)
-- **t** (logical time)
-- **G** (governance)
-- **L** (boundaries)
+KL Execution Theory defines execution as a deterministic chain of five derived elements:
 
-A separate document describes how these axioms map to the implementation:
+```
+Δ → V → t → G(V) → SS
+```
 
-**[docs/execution_theory_in_code.md](docs/execution_theory_in_code.md)**
+- **Δ (Delta)** – Atomic state transition (one `Kernel.execute()` call)
+- **V (Behaviour)** – Ordered sequence of transitions (trace list)
+- **t (Time)** – Logical time derived from position in V (list index)
+- **G(V) (Governance)** – Policy function evaluated over behaviour
+- **SS (Shadow State)** – Derived audit state from governance evaluation
+
+Each element depends on the previous. The chain is minimal: no element can be removed without losing determinism, auditability, or domain neutrality.
+
+### Domain-Agnostic Validation
+
+The theory is domain-neutral and has been validated across multiple domains: mathematical computation (Poisson solvers, integration), text processing, AI inference with policy constraints, and data validation. The same structural properties hold regardless of domain: deterministic execution, complete auditability, replayable behaviour, and transparent governance.
+
+### Documentation
+
+- **[docs/kl_execution_theory_v1.md](docs/kl_execution_theory_v1.md)** – Complete formal specification
+- **[docs/execution_theory_in_code.md](docs/execution_theory_in_code.md)** – Theory-to-code mapping
 
 ## Roadmap
 

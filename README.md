@@ -458,6 +458,15 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 For bug reports and feature requests, please use the [GitHub Issues](https://github.com/lukaspfisterch/kl-kernel-logic/issues).
 
+---
+
+## Theoretical Foundation
+
+KL Kernel Logic implements a minimal deterministic execution substrate.  
+Its structure follows the axioms defined in the **[KL Execution Theory](https://github.com/lukaspfisterch/kl-execution-theory)**, which formalize state transitions, behaviour sequences, governance functions and persistent audit state.
+
+---
+
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.

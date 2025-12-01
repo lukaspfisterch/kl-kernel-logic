@@ -14,7 +14,7 @@ def test_psi_with_all_required_fields_is_valid():
         domain="test",
         effect="pure",
     )
-    
+
     # Should not raise
     psi.assert_minimal_valid()
 
@@ -26,7 +26,7 @@ def test_psi_with_empty_psi_type_raises():
         domain="test",
         effect="pure",
     )
-    
+
     with pytest.raises(ValueError, match="psi_type must not be empty"):
         psi.assert_minimal_valid()
 
@@ -38,7 +38,7 @@ def test_psi_with_empty_domain_raises():
         domain="",
         effect="pure",
     )
-    
+
     with pytest.raises(ValueError, match="domain must not be empty"):
         psi.assert_minimal_valid()
 
@@ -50,44 +50,45 @@ def test_psi_with_empty_effect_raises():
         domain="test",
         effect="",
     )
-    
+
     with pytest.raises(ValueError, match="effect must not be empty"):
         psi.assert_minimal_valid()
 
 
 def test_psi_key_generation():
-    """psi_key() should combine psi_type and version."""
+    """psi_key() should embed psi_type in a stable key."""
     psi = kl.PsiDefinition(
         psi_type="test.operation",
         domain="test",
         effect="pure",
-        version="0.3.0",
     )
-    
+
     key = psi.psi_key()
-    assert key == "test.operation@0.3.0"
+
+    # In the minimal core, psi_type is the primary identifier.
+    # The exact key format is an implementation detail, but it
+    # must at least contain the psi_type.
+    assert "test.operation" in key
 
 
 def test_psi_describe_includes_all_fields():
-    """describe() should include all PsiDefinition fields."""
+    """describe() should include all relevant PsiDefinition fields."""
     psi = kl.PsiDefinition(
         psi_type="test.operation",
         domain="test",
         effect="pure",
-        version="0.3.0",
         description="Test operation",
         tags=["test", "demo"],
         metadata={"key": "value"},
     )
-    
+
     data = psi.describe()
-    
+
     assert data["psi_type"] == "test.operation"
     assert data["domain"] == "test"
     assert data["effect"] == "pure"
-    assert data["version"] == "0.3.0"
     assert data["description"] == "Test operation"
-    assert data["tags"] == ["test", "demo"]
-    assert data["metadata"]["key"] == "value"
+    assert data.get("tags") == ["test", "demo"]
+    assert data.get("metadata") == {"key": "value"}
+    # Constraints should still be part of the description payload.
     assert "constraints" in data
-

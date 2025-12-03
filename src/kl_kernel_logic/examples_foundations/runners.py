@@ -2,20 +2,13 @@
 Runnable helpers for foundational examples.
 
 These are convenience entrypoints to demonstrate KL end-to-end on deterministic
-operations. They print the bundled {psi, envelope, execution} result.
+operations.
 """
 
-from pprint import pprint
 from typing import Any, Dict
 
-from kl_kernel_logic import (
-    PsiDefinition,
-    PsiConstraints,
-    ExecutionPolicy,
-    ExecutionContext,
-    CAEL,
-    CAELConfig,
-)
+from kl_kernel_logic import PsiDefinition, Kernel, CAEL
+
 from .operations import (
     Grid1D,
     solve_poisson_1d,
@@ -27,64 +20,31 @@ from .operations import (
 def run_poisson_example() -> Dict[str, Any]:
     psi = PsiDefinition(
         psi_type="foundations.poisson_1d",
-        domain="math",
-        effect="pure",
-        description="1D Poisson equation solver",
-        constraints=PsiConstraints(
-            scope="numerics",
-            format="Grid1D input/output",
-            extra={"max_grid_size": 4096},
-        ),
-    )
-    policy = ExecutionPolicy(
-        allow_network=False,
-        allow_filesystem=False,
-        timeout_seconds=30,
-    )
-    ctx = ExecutionContext(
-        user_id="foundations-numerics",
-        request_id="poisson-1d-demo-001",
-        policy=policy,
+        name="poisson_solver",
     )
 
     rho_grid = Grid1D(values=[0.0, 1.0, 0.0], spacing=0.1)
-    cael = CAEL(config=CAELConfig())
-    trace = cael.execute(
-        psi=psi,
-        task=solve_poisson_1d,
-        ctx=ctx,
-        rho=rho_grid,
-    )
-    return trace.describe()
+    kernel = Kernel()
+    trace = kernel.execute(psi=psi, task=solve_poisson_1d, rho=rho_grid)
+
+    return {
+        "psi": psi.describe(),
+        "success": trace.success,
+        "output": trace.output,
+        "runtime_ms": trace.runtime_ms,
+    }
 
 
 def run_trajectory_example() -> Dict[str, Any]:
     psi = PsiDefinition(
         psi_type="foundations.trajectory_1d",
-        domain="math",
-        effect="pure",
-        description="1D trajectory integration",
-        constraints=PsiConstraints(
-            scope="mechanics",
-            temporal="deterministic_simulation",
-        ),
-    )
-    policy = ExecutionPolicy(
-        allow_network=False,
-        allow_filesystem=False,
-        timeout_seconds=10,
-    )
-    ctx = ExecutionContext(
-        user_id="foundations-mechanics",
-        request_id="traj-1d-demo-001",
-        policy=policy,
+        name="trajectory_integrator",
     )
 
-    cael = CAEL(config=CAELConfig())
-    trace = cael.execute(
+    kernel = Kernel()
+    trace = kernel.execute(
         psi=psi,
         task=integrate_trajectory_1d,
-        ctx=ctx,
         x0=0.0,
         v0=0.0,
         dt=0.01,
@@ -92,46 +52,67 @@ def run_trajectory_example() -> Dict[str, Any]:
         force=1.0,
         mass=1.0,
     )
-    return trace.describe()
+
+    return {
+        "psi": psi.describe(),
+        "success": trace.success,
+        "output": trace.output,
+        "runtime_ms": trace.runtime_ms,
+    }
 
 
 def run_smoothing_example() -> Dict[str, Any]:
     psi = PsiDefinition(
         psi_type="foundations.smoothing",
-        domain="math",
-        effect="pure",
-        description="Three-point moving average",
-        constraints=PsiConstraints(
-            scope="signals",
-            format="1D scalar series",
-            extra={"max_length": 10000},
-        ),
-    )
-    policy = ExecutionPolicy(
-        allow_network=False,
-        allow_filesystem=False,
-        timeout_seconds=5,
-    )
-    ctx = ExecutionContext(
-        user_id="foundations-signals",
-        request_id="smooth-demo-001",
-        policy=policy,
+        name="moving_average",
     )
 
-    cael = CAEL(config=CAELConfig())
-    trace = cael.execute(
+    kernel = Kernel()
+    trace = kernel.execute(
         psi=psi,
         task=smooth_measurements,
-        ctx=ctx,
         values=[1.0, 2.0, 3.0, 4.0],
     )
-    return trace.describe()
+
+    return {
+        "psi": psi.describe(),
+        "success": trace.success,
+        "output": trace.output,
+        "runtime_ms": trace.runtime_ms,
+    }
+
+
+def run_cael_example() -> Dict[str, Any]:
+    """Run multiple operations via CAEL."""
+    psi_smooth = PsiDefinition(psi_type="foundations.smoothing", name="smooth")
+    psi_traj = PsiDefinition(psi_type="foundations.trajectory", name="traj")
+
+    cael = CAEL(kernel=Kernel())
+
+    result = cael.run([
+        (psi_smooth, smooth_measurements, {"values": [1.0, 2.0, 3.0]}),
+        (psi_traj, integrate_trajectory_1d, {
+            "x0": 0.0, "v0": 1.0, "dt": 0.1, "steps": 10, "force": 0.0, "mass": 1.0
+        }),
+    ])
+
+    return {
+        "success": result.success,
+        "final_output": result.final_output,
+        "trace_count": len(result.traces),
+    }
 
 
 def run_all_examples() -> None:
+    from pprint import pprint
+    print("=== Poisson ===")
     pprint(run_poisson_example())
+    print("\n=== Trajectory ===")
     pprint(run_trajectory_example())
+    print("\n=== Smoothing ===")
     pprint(run_smoothing_example())
+    print("\n=== CAEL ===")
+    pprint(run_cael_example())
 
 
 if __name__ == "__main__":

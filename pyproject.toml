@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kl-kernel-logic"
-version = "0.3.4"
+version = "0.4.0"
 description = "Lightweight deterministic execution substrate for governed operations."
 authors = [
   { name = "Lukas Pfister", email = "228201683+lukaspfisterch@users.noreply.github.com" }
 ]
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = []
 keywords = ["deterministic", "execution", "governance", "audit", "llm", "kernel", "policy", "traceability"]
 classifiers = [

@@ -1,142 +1,121 @@
-"""
-Deterministic execution kernel.
-
-Receives a PsiDefinition, an optional PsiEnvelope and a callable task.
-Executes the task once and returns a structured ExecutionTrace.
-"""
+# kernel.py
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from time import perf_counter
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
-from uuid import uuid4
+from typing import Any, Callable, Generic, Mapping, Optional, TypeVar
+import uuid
 
 from .psi import PsiDefinition
-from .psi_envelope import PsiEnvelope
+
+T = TypeVar("T")
+
+Metadata = Mapping[str, Any]
+RunIdFactory = Callable[[], str]
+NowProvider = Callable[[], datetime]
+PerfCounterProvider = Callable[[], float]
 
 
-@dataclass
-class ExecutionTrace:
+@dataclass(frozen=True)
+class ExecutionTrace(Generic[T]):
     """
-    Single execution record.
+    Immutable record of one kernel execution.
 
-    Captures:
-      - logical intent (psi)
-      - transport metadata (envelope)
-      - outcome (success, output, error)
-      - timing (started_at, finished_at, runtime_ms)
-      - governance hooks (trace_id, parent_trace_id, policy_decisions, policy_result)
-      - free form metadata
+    Contract:
+    - Never mutated after creation.
+    - Field names and meanings are stable.
     """
 
+    run_id: str
     psi: PsiDefinition
-    envelope: PsiEnvelope
 
-    success: bool
-    output: Any
-    error: Optional[str]
-
-    started_at: str
-    finished_at: str
+    started_at: datetime
+    finished_at: datetime
     runtime_ms: float
 
-    trace_id: str = field(default_factory=lambda: str(uuid4()))
-    parent_trace_id: Optional[str] = None
+    success: bool
+    output: Optional[T]
+    error: Optional[str]
+    exception_type: Optional[str]
+    exception_repr: Optional[str]
 
-    policy_decisions: List[Mapping[str, Any]] = field(default_factory=list)
-    policy_result: Optional[str] = None  # Summary: "allow", "block", "timeout" (added in 0.3.4)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
-    def describe(self) -> Dict[str, Any]:
-        """
-        Serializable representation of the execution trace.
-
-        Keys are stable and additive. Existing keys are not renamed.
-        """
-        return {
-            "trace_id": self.trace_id,
-            "parent_trace_id": self.parent_trace_id,
-            "psi": self.psi.describe(),
-            "envelope": self.envelope.describe(),
-            "success": self.success,
-            "output": self.output,
-            "error": self.error,
-            "started_at": self.started_at,
-            "finished_at": self.finished_at,
-            "runtime_ms": self.runtime_ms,
-            "policy_decisions": [dict(d) for d in self.policy_decisions],
-            "policy_result": self.policy_result,
-            "metadata": dict(self.metadata),
-        }
+    metadata: Metadata = field(default_factory=dict)
 
 
 class Kernel:
     """
-    Minimal execution engine.
+    Minimal deterministic execution engine.
 
-    No policy logic.
-    No orchestration.
-    Only executes a callable once and returns an ExecutionTrace.
+    Contract:
+    - execute calls the task exactly once.
+    - execute never raises, exceptions are captured in the trace.
+    - Time is measured via a monotonic clock.
+    - metadata is passed through and not interpreted.
     """
+
+    def __init__(
+        self,
+        *,
+        run_id_factory: Optional[RunIdFactory] = None,
+        now_provider: Optional[NowProvider] = None,
+        perf_counter_provider: Optional[PerfCounterProvider] = None,
+    ) -> None:
+        self._run_id_factory: RunIdFactory = (
+            run_id_factory or (lambda: uuid.uuid4().hex)
+        )
+        self._now_provider: NowProvider = (
+            now_provider or (lambda: datetime.now(timezone.utc))
+        )
+        self._perf_counter: PerfCounterProvider = perf_counter_provider or perf_counter
 
     def execute(
         self,
         *,
         psi: PsiDefinition,
-        task: Callable[..., Any],
-        envelope: Optional[PsiEnvelope] = None,
-        parent_trace_id: Optional[str] = None,
-        policy_decisions: Optional[Sequence[Mapping[str, Any]]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        task: Callable[..., T],
+        metadata: Optional[Metadata] = None,
         **kwargs: Any,
-    ) -> ExecutionTrace:
+    ) -> ExecutionTrace[T]:
         """
-        Execute a task under a given Psi and optional envelope.
-
-        Exceptions are captured into ExecutionTrace.error and never bubble up.
+        Execute task once and return a trace. Never raises.
         """
-
-        # Ensure envelope exists
-        env = envelope if envelope is not None else PsiEnvelope(psi=psi)
-
-        # Normalise optional collections
-        policy_list: List[Mapping[str, Any]] = (
-            list(policy_decisions) if policy_decisions is not None else []
-        )
-        meta: Dict[str, Any] = dict(metadata) if metadata is not None else {}
-
-        # RFC 3339 UTC timestamps
-        started_dt = datetime.now(timezone.utc)
-        started_at = started_dt.isoformat(timespec="milliseconds")
-        t0 = perf_counter()
+        started_at = self._now_provider()
+        start = self._perf_counter()
 
         success = False
-        output: Any = None
-        error_msg: Optional[str] = None
+        output: Optional[T] = None
+        error: Optional[str] = None
+        exc_type: Optional[str] = None
+        exc_repr: Optional[str] = None
 
         try:
             output = task(**kwargs)
             success = True
-        except Exception as exc:
-            success = False
-            error_msg = f"{exc.__class__.__name__}: {exc}"
+        except Exception as exc:  # noqa: BLE001
+            error = str(exc)
+            exc_type = exc.__class__.__name__
+            exc_repr = repr(exc)
 
-        finished_dt = datetime.now(timezone.utc)
-        finished_at = finished_dt.isoformat(timespec="milliseconds")
-        runtime_ms = (perf_counter() - t0) * 1000.0
+        finished_at = self._now_provider()
+        end = self._perf_counter()
+
+        runtime_ms = max((end - start) * 1000.0, 0.0)
+        run_id = self._run_id_factory()
+
+        trace_metadata: dict[str, Any] = dict(metadata) if metadata is not None else {}
 
         return ExecutionTrace(
+            run_id=run_id,
             psi=psi,
-            envelope=env,
-            success=success,
-            output=output,
-            error=error_msg,
             started_at=started_at,
             finished_at=finished_at,
             runtime_ms=runtime_ms,
-            parent_trace_id=parent_trace_id,
-            policy_decisions=policy_list,
-            metadata=meta,
+            success=success,
+            output=output,
+            error=error,
+            exception_type=exc_type,
+            exception_repr=exc_repr,
+            metadata=trace_metadata,
         )

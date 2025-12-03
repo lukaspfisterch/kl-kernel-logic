@@ -1,478 +1,181 @@
 # KL Kernel Logic
 
-**KL Kernel Logic is a small deterministic execution substrate that separates the definition of an operation from its controlled execution. It does not orchestrate. It provides a clean, auditable execution core that higher-level systems can build on.**
+A small deterministic execution model core.
+
+KL Kernel Logic provides three components:
+
+- `PsiDefinition`: operation definition (what)
+- `Kernel`: atomic execution primitive (how)
+- `CAEL`: sequential behaviour order (in what order)
+
+It does not handle orchestration, governance, or policy. Those belong to higher layers.
 
 [![PyPI version](https://img.shields.io/pypi/v/kl-kernel-logic.svg)](https://pypi.org/project/kl-kernel-logic/)
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![Status](https://img.shields.io/badge/Status-Alpha-orange)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-KL Kernel Logic separates the *definition* of an operation (Psi) from its *execution* (CAEL + Kernel).  
-It gives you a small execution core that can run both fully deterministic tasks and nondeterministic ones (for example AI calls) with a clear execution trace.
+---
+
+## Version 0.4.0
+
+Version 0.4.0 represents a radical simplification of the core. The codebase has been reduced in three stages:
+
+- From approximately 2000 lines of code
+- To approximately 700 lines of core code
+- To the current **244 LOC** minimal core (psi.py, kernel.py, cael.py)
+
+This reduction reflects a move toward an axiomatic, minimal, stable substrate. The core now contains only what is necessary for the deterministic execution model and tracing.
+
+**KL Kernel Logic 0.4.0 is a minimal, stable core.**  
+The public API in `__init__.py` and the behaviour covered by the tests are considered frozen.
+
+---
+
+## Installation
 
 ```bash
 pip install kl-kernel-logic
 ```
 
+---
+
+## Core Concepts
+
+### PsiDefinition
+
+A minimal logical operation descriptor. The core treats `PsiDefinition` as opaque. It stores and passes through these values but never interprets them.
+
 ```python
-from kl_kernel_logic import PsiDefinition, CAEL, CAELConfig
+PsiDefinition(
+    psi_type: str,
+    name: str,
+    metadata: Mapping[str, Any] | None = None,
+)
+```
+
+PsiDefinition metadata is purely descriptive and never enters the Kernel or the ExecutionTrace unless explicitly passed to `Kernel.execute()`.
+
+### Kernel
+
+A deterministic execution engine. Deterministic in its execution model, not in the behaviour of user-provided tasks. Given a `PsiDefinition` and a callable, the Kernel executes the task and returns an `ExecutionTrace`.
+
+Semantics:
+
+- `task` is called exactly once with `**kwargs`
+- `success` is `True` if and only if no exception is raised by `task`
+- `output` contains the return value on success, `None` on failure
+- `runtime_ms` is measured via a monotonic perf counter, always non-negative
+- `run_id` is unique per execution
+
+The Kernel never interprets metadata, never makes policy decisions, and never retries. Kernel implements Δ as atomicity of execution and observation, not as state change. State belongs to user logic.
+
+### ExecutionTrace
+
+Immutable record of a single Kernel execution.
+
+Fields:
+
+- `psi`: the PsiDefinition used
+- `run_id`: unique identifier for this execution
+- `success`: `True` if task completed without exception
+- `output`: return value of task (or `None` on failure)
+- `error`: exception message (or `None` on success)
+- `exception_type`: exception class name (or `None`)
+- `exception_repr`: repr of exception (or `None`)
+- `started_at`: UTC datetime when execution started (wall clock)
+- `finished_at`: UTC datetime when execution finished (wall clock)
+- `runtime_ms`: elapsed time in milliseconds (monotonic perf counter)
+- `metadata`: the metadata dict passed to `Kernel.execute()`, not from PsiDefinition
+
+Time carries two layers: observational wall-clock time (UTC timestamps) and monotonic duration (runtime_ms). runtime_ms provides a monotonic measure suitable for ordering and duration, independent of wall-clock adjustments.
+
+The core never mutates traces after creation.
+
+### CAEL
+
+Sequential Atomic Execution Layer. Runs a sequence of independent `(psi, task, kwargs)` steps via a single Kernel instance in deterministic order.
+
+Semantics:
+
+- Steps are executed in order
+- If a step fails, execution stops immediately
+- `CaelResult.success` is `True` if and only if all steps succeeded
+- `CaelResult.final_output` is the output of the last successful step, or `None` if the first step fails
+- `CaelResult.traces` is the ordered list of `ExecutionTrace` objects (only executed steps)
+
+CAEL does not pass output from one step to the next. Each step receives its own independent `kwargs`. It does not include retry logic, routing, or governance. CAEL establishes a total order over execution steps, independent of temporal measurements.
+
+---
+
+## Usage
+
+### Basic Kernel Execution
+
+```python
+from kl_kernel_logic import PsiDefinition, Kernel
 
 def uppercase(text: str) -> str:
     return text.upper()
 
-psi = PsiDefinition(
-    psi_type="text.uppercase",
-    domain="text",
-    effect="pure",
-)
-
-cael = CAEL(config=CAELConfig())
-trace = cael.execute(psi=psi, task=uppercase, text="Hello KL")
-print(trace.describe())
-```
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Core Concepts](#core-concepts)
-- [Architecture](#architecture)
-- [Policy and Context](#policy-and-context)
-- [Audit](#audit)
-- [Repository Structure](#repository-structure)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Foundations Examples](#foundations-examples)
-- [Tests](#tests)
-- [Theoretical Foundation](#theoretical-foundation)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
-- [Changelog](#changelog)
-
-## Overview
-
-KL Kernel Logic provides a minimal grammar for defining operations (Psi) and executing them under explicit constraints (CAEL). It addresses a simple question:
-
-**How do we make execution transparent and auditable when deterministic and nondeterministic components are mixed?**
-
-KL does this by:
-
-- defining operations in a declarative schema (Psi)
-- transporting them via versioned envelopes
-- executing them through a small kernel
-- producing structured traces that other systems can inspect and store
-
-The framework is domain-neutral. It does not impose business semantics. It is a binding layer for system builders and AI platform engineers.
-
-## Core Concepts
-
-**For complete API documentation, see:** [docs/api_reference.md](docs/api_reference.md)
-
-### Psi
-
-Psi describes the essence of an operation, independent of its technical implementation:
-
-- **psi_type**: fully qualified operation identifier (for example "foundations.poisson_1d")
-- **domain**: logical domain (for example "math", "io", "ai")
-- **effect**: execution characteristic (for example "pure", "read", "io", "external", "ai")
-- **schema_version**: Psi schema version (default "1.0")
-- **constraints**: PsiConstraints for policy anchoring
-- optional **description**, **tags**, **metadata**
-
-Psi is immutable and serialisable via `to_dict()`.
-
-### Effect classes
-
-Effect classes describe the nature of the operation:
-
-- **pure** - deterministic computation without side effects
-- **read** - read-only operations
-- **io** - filesystem or similar side effects
-- **external** - network or remote calls
-- **ai** - AI or model calls that may be nondeterministic
-
-The default policy engine uses these effect classes but does not hard-code any domain logic.
-
-### PsiEnvelope
-
-A PsiEnvelope is a versioned container around a Psi:
-
-- carries the PsiDefinition
-- adds **envelope_id** (UUID)
-- adds creation **timestamp**
-- optional **metadata** and **signature**
-
-Envelopes give you a stable transport and audit container.
-
-### Kernel
-
-The Kernel is the lowest-level execution engine. It:
-
-- receives PsiDefinition, optional PsiEnvelope and a callable task
-- executes the callable exactly once
-- captures any exception as a string
-- measures timing
-- returns an ExecutionTrace
-
-The kernel does not apply policies and does not orchestrate.
-
-### CAEL
-
-The Controlled AI Execution Layer (CAEL):
-
-- evaluates policies via a PolicyEngine
-- builds or reuses a PsiEnvelope
-- delegates execution to the Kernel
-- records policy decisions in the resulting ExecutionTrace
-- optionally classifies timeouts based on ExecutionContext.policy.timeout_seconds
-
-CAEL is the main entry point for calling the kernel with governance hooks.
-
-## Architecture
-
-**For detailed architecture discussion, see:** [docs/kl-architecture.md](docs/kl-architecture.md)
-
-Textual overview:
-
-```text
-Client / App / Orchestrator
-            |
-            v
-+-------------------------------+
-|        KL Kernel Logic        |
-+-------------------------------+
-       |                   |
-       v                   v
-   Psi Definition     Controlled Execution (CAEL)
-         \               /
-          \             /
-           +-----------+
-           |  Kernel   |
-           +-----------+
-                 |
-                 v
-        Task / Function / Model
-```
-
-Each run produces a trace that bundles:
-
-- logical intent (Psi)
-- transport metadata (Envelope)
-- execution outcome and timing (ExecutionTrace)
-
-## Policy and Context
-
-KL defines a small policy interface and a default policy engine.
-
-```python
-from kl_kernel_logic import (
-    PsiDefinition,
-    CAEL, CAELConfig,
-    ExecutionContext, ExecutionPolicy,
-)
-from kl_kernel_logic import PolicyViolationError
-
-psi = PsiDefinition(
-    psi_type="filesystem.write_example",
-    domain="io",
-    effect="io",
-)
-
-ctx = ExecutionContext(
-    user_id="user_123",
-    request_id="req_456",
-    policy=ExecutionPolicy(
-        allow_network=False,
-        allow_filesystem=False,
-        timeout_seconds=2.0,
-    ),
-)
-
-cael = CAEL(config=CAELConfig())
-
-try:
-    trace = cael.execute(psi=psi, task=some_io_task, ctx=ctx)
-except PolicyViolationError as exc:
-    print(f"Blocked by {exc.policy_name}: {exc.reason}")
-```
-
-The built-in **DefaultSafePolicyEngine**:
-
-- allows **pure**, **read**, **ai**
-- denies **io**, **external** by default
-
-Timeout classification is derived from `ExecutionContext.policy.timeout_seconds` and the measured runtime.
-
-## Audit
-
-Audit is built on top of the execution trace.
-
-```python
-from kl_kernel_logic import Kernel, PsiDefinition, PsiEnvelope
-from kl_kernel_logic import build_audit_report
-
-psi = PsiDefinition(
-    psi_type="config.read",
-    domain="config",
-    effect="read",
-)
-
-envelope = PsiEnvelope(psi=psi, version="1.0")
+psi = PsiDefinition(psi_type="text", name="uppercase")
 kernel = Kernel()
 
-trace = kernel.execute(psi=psi, task=lambda: "ok", envelope=envelope)
-report = build_audit_report(trace)
+trace = kernel.execute(psi=psi, task=uppercase, text="hello")
 
-print(report.describe())
+print(trace.success)   # True
+print(trace.output)    # "HELLO"
 ```
 
-Audit reports are simple, serialisable objects that include:
-
-- **run_id**
-- **trace** (from ExecutionTrace.describe())
-- **generated_at**
-- optional **metadata**
-
-## Repository Structure
-
-```
-src/kl_kernel_logic/
-    __init__.py
-    psi.py
-    psi_envelope.py
-    kernel.py
-    cael.py
-    execution_context.py
-    policy.py
-    audit.py
-    examples_foundations/
-
-tests/
-docs/
-    api_reference.md
-    execution_theory_in_code.md
-    kl-architecture.md
-    foundational-execution-patterns.md
-    roadmap.md
-```
-
-### Core Modules
-
-- **psi.py** - PsiDefinition and PsiConstraints
-- **psi_envelope.py** - versioned envelope
-- **kernel.py** - execution kernel and ExecutionTrace
-- **cael.py** - CAEL wrapper and CAELConfig
-- **execution_context.py** - ExecutionContext and ExecutionPolicy
-- **policy.py** - PolicyEngine, PolicyDecision, DefaultSafePolicyEngine
-- **audit.py** - AuditReport and builder
-- **examples_foundations** - deterministic reference operations
-
-### Documentation
-
-- **[api_reference.md](docs/api_reference.md)** - Complete API reference for 0.3.x
-- **[execution_theory_in_code.md](docs/execution_theory_in_code.md)** - Theory to code mapping
-- **[kl-architecture.md](docs/kl-architecture.md)** - Architecture overview
-- **[foundational-execution-patterns.md](docs/foundational-execution-patterns.md)** - Foundational execution patterns guide
-- **[roadmap.md](docs/roadmap.md)** - Development roadmap
-
-## Installation
-
-### From PyPI
-
-```bash
-pip install kl-kernel-logic
-```
-
-### From source
-
-```bash
-git clone https://github.com/lukaspfisterch/kl-kernel-logic.git
-cd kl-kernel-logic
-
-python -m venv .venv
-# Activate venv as usual
-
-pip install -e .
-```
-
-## Quick Start
-
-### Two Execution Modes
-
-KL provides two execution modes:
-
-#### 1. CAEL (Recommended for Production)
-
-Use **CAEL** when you need:
-- Policy evaluation and enforcement
-- User context and request tracking
-- Production-grade execution with governance
+### CAEL with Independent Steps
 
 ```python
-from kl_kernel_logic import CAEL, CAELConfig, PsiDefinition, ExecutionContext, ExecutionPolicy
+from kl_kernel_logic import PsiDefinition, Kernel, CAEL
 
-def add(a: int, b: int) -> int:
-    return a + b
+def step_a() -> int:
+    return 10
 
-psi = PsiDefinition(
-    psi_type="math.add",
-    domain="math",
-    effect="pure",
-)
+def step_b() -> int:
+    return 20
 
-ctx = ExecutionContext(
-    user_id="user_123",
-    request_id="req_456",
-    policy=ExecutionPolicy(timeout_seconds=1.0),
-)
+psi_a = PsiDefinition(psi_type="math", name="first")
+psi_b = PsiDefinition(psi_type="math", name="second")
 
-cael = CAEL(config=CAELConfig())
-trace = cael.execute(psi=psi, task=add, ctx=ctx, a=1, b=2)
+cael = CAEL(kernel=Kernel())
 
-print(trace.output)          # 3
-print(trace.success)         # True
-print(trace.runtime_ms)      # float
+result = cael.run([
+    (psi_a, step_a, {}),
+    (psi_b, step_b, {}),
+])
+
+print(result.success)       # True
+print(result.final_output)  # 20
+print(len(result.traces))   # 2
 ```
-
-#### 2. Kernel (Low-Level)
-
-Use **Kernel** directly when you need:
-- Full control without policy layer
-- Testing and development
-- Building custom orchestrators
-
-```python
-from kl_kernel_logic import Kernel, PsiDefinition
-
-def add(a: int, b: int) -> int:
-    return a + b
-
-psi = PsiDefinition(
-    psi_type="math.add",
-    domain="math",
-    effect="pure",
-)
-
-kernel = Kernel()
-trace = kernel.execute(psi=psi, task=add, a=1, b=2)
-
-print(trace.output)          # 3
-print(trace.success)         # True
-print(trace.runtime_ms)      # float
-```
-
-**Recommendation:** Start with **CAEL** for production. Use **Kernel** for testing or when building custom execution layers.
-
-## Foundations Examples
-
-The `examples_foundations` module contains deterministic operations such as:
-
-- Poisson equation solver in 1D
-- Sliding-window smoothing
-- Simple trajectory integration
-
-They are used in the test suite and serve as reference operations.
-
-**See also:** [docs/foundational-execution-patterns.md](docs/foundational-execution-patterns.md) for detailed examples and patterns.
-
-## Tests
-
-Run all tests:
-
-```bash
-pytest
-```
-
-The suite covers:
-
-- Psi semantics and constraints
-- envelope behaviour
-- kernel execution and trace structure
-- CAEL policy bridge
-- audit report generation
-- foundation operations
-
-## Theoretical Foundation
-
-**KL Kernel Logic is the reference implementation of KL Execution Theory, a minimal and domain-agnostic execution model.**
-
-### The 5-Element Execution Chain
-
-KL Execution Theory defines execution as a deterministic chain of five derived elements:
-
-```
-Δ → V → t → G(V) → SS
-```
-
-- **Δ (Delta)** – Atomic state transition (one `Kernel.execute()` call)
-- **V (Behaviour)** – Ordered sequence of transitions (trace list)
-- **t (Time)** – Logical time derived from position in V (list index)
-- **G(V) (Governance)** – Policy function evaluated over behaviour
-- **SS (Shadow State)** – Derived audit state from governance evaluation
-
-Each element depends on the previous. The chain is minimal: no element can be removed without losing determinism, auditability, or domain neutrality.
-
-### Domain-Agnostic Validation
-
-The theory is domain-neutral and has been validated across multiple domains: mathematical computation (Poisson solvers, integration), text processing, AI inference with policy constraints, and data validation. The same structural properties hold regardless of domain: deterministic execution, complete auditability, replayable behaviour, and transparent governance.
-
-### Documentation
-
-- **[docs/kl_execution_theory_v1.md](docs/kl_execution_theory_v1.md)** – Complete formal specification
-- **[docs/execution_theory_in_code.md](docs/execution_theory_in_code.md)** – Theory-to-code mapping
-
-## Roadmap
-
-### Current Focus (0.3.x)
-
-- Maintaining API stability
-- Bug fixes and polish
-- Enhanced documentation and examples
-- CI/CD automation
-
-### Near Future (0.4.0)
-
-- Richer PolicyEngine interface with context and history
-- G(V) governance over trace sequences
-- Standardized trace export (JSONL, NDJSON)
-- Optional constraint validation
-
-### Long Term (0.5.0+)
-
-- Enterprise extensions as separate packages
-- Async execution support
-- Observability integrations
-- Production-scale features
-
-**See:** [docs/roadmap.md](docs/roadmap.md) for complete roadmap, versioning strategy, and non-goals.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-For bug reports and feature requests, please use the [GitHub Issues](https://github.com/lukaspfisterch/kl-kernel-logic/issues).
 
 ---
 
-## Theoretical Foundation
+## Scope and Non-Goals
 
-KL Kernel Logic implements a minimal deterministic execution substrate.  
-Its structure follows the axioms defined in the **[KL Execution Theory](https://github.com/lukaspfisterch/kl-execution-theory)**, which formalize state transitions, behaviour sequences, governance functions and persistent audit state.
+This package does not handle:
+
+- Policy enforcement
+- Governance or access control
+- Rate limiting or quotas
+- Domain-specific logic
+- Retry or fallback strategies
+
+KL Kernel Logic is a small deterministic substrate. Higher layers (gateways, governance layers, orchestrators) build on top of it.
+
+---
+
+## KL Execution Theory
+
+KL Kernel Logic implements Δ (atomic transitions) and V (behaviour sequences) in their stateless form, and provides observable projections of t (logical order and duration). State transitions belong to higher layers or to user logic. G (governance) and L (boundaries) live in higher layers such as gateways or governance systems.
+
+→ [KL Execution Theory](https://github.com/lukaspfisterch/kl-execution-theory)
 
 ---
 
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
-
-Copyright (c) 2025 Lukas Pfister
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for detailed version history and migration notes.

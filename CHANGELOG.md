@@ -6,74 +6,67 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ---
 
+## [0.4.0] – 2025-12-03
+
+**Status:** Minimal, stable, frozen core.
+
+### Changed
+
+- Radical simplification: 2000 LOC → 700 LOC → **244 LOC** minimal core
+- Core reduced to three files: `psi.py`, `kernel.py`, `cael.py`
+- Public API frozen: `PsiDefinition`, `Kernel`, `ExecutionTrace`, `CAEL`, `CaelResult`
+- Python requirement: 3.11+
+
+### Removed
+
+- `PsiConstraints`, `PsiEnvelope`
+- `ExecutionPolicy`, `ExecutionContext`
+- `PolicyEngine`, `DefaultSafePolicyEngine`
+- `CAELConfig`, `PolicyViolationError`
+- `AuditReport`, `build_audit_report`
+- All policy, governance, and context handling (moved to higher layers)
+
+### Added
+
+- `CaelResult` as explicit return type for `CAEL.run()`
+- Axiom tests (`test_axioms.py`) covering Δ, V, t, determinism, SS
+- Public API smoke tests (`test_public_api.py`)
+
+### Theory Alignment
+
+- **Δ** (atomic execution) → `Kernel.execute()` as atomicity of execution and observation
+- **V** (behaviour) → `CAEL.run()` establishes total order over execution steps
+- **t** (logical time) → observable projections: wall-clock timestamps + monotonic duration
+- **G, L** (governance, boundaries) → belong to higher layers
+
+### Migration Notes
+
+- Replace `CAEL(config=CAELConfig())` with `CAEL(kernel=Kernel())`
+- Replace `cael.execute(psi, task, ctx, **kwargs)` with `cael.run([(psi, task, kwargs)])`
+- Remove all policy/context parameters
+- `PsiDefinition` now only has `psi_type`, `name`, `metadata`
+
+---
+
 ## [0.3.4] – 2025-12-01
 
-**Status:** Governance enhancements, schema clarity.
+**Status:** Final pre-simplification release.
 
 ### Changed
 
 - Renamed `PsiDefinition.version` → `schema_version` for clarity
-- `from_dict()` accepts both names for backward compatibility
 
 ### Added
 
-- `PsiDefinition.correlation_id` - Optional field for request tracing
-- `PsiDefinition.criticality` - Optional field for policy prioritization
-- `ExecutionTrace.policy_result` - Top-level policy summary (`"allow"`, `"block"`, `"timeout"`)
-
-### Fixed
-
-- Documentation consistency across all files
+- `PsiDefinition.correlation_id`
+- `PsiDefinition.criticality`
+- `ExecutionTrace.policy_result`
 
 ---
 
 ## [0.3.3] – 2025-11-30
 
-**Status:** Minimal, stable, theory-aligned core.
-
-### Changed
-
-- Codebase reduced and consolidated to ~700 LOC
-- API surface simplified and frozen for 0.3.x
-- Kernel and CAEL execution paths unified and cleaned up
-- Policy system reduced to minimal PolicyEngine interface
-
-### Added
-
-- Full API reference (`docs/api_reference.md`)
-- Theory-to-code mapping (`docs/execution_theory_in_code.md`)
-- Updated architecture overview and examples
-
-### Removed
-
-- Multiprocessing timeout enforcement
-- Non-essential utilities and experimental features
-- Complex policy adapters not aligned with minimal core
-
-### Fixed
-
-- Type signatures aligned with implementation
-- Documentation consistency across all files
-- Cross-references and formatting issues
-
-### Theory Alignment
-
-- **Δ** (atomic step) → `Kernel.execute()`
-- **V** (behaviour) → list of `ExecutionTrace`
-- **t** (logical time) → trace index + runtime
-- **G** (governance) → `PolicyEngine`
-- **L** (boundaries) → `ExecutionPolicy` + constraints
-
-### Migration Notes
-
-- No breaking changes from 0.3.2
-- Removed policy extensions should be implemented in orchestrators
-
----
-
-## [0.3.1]
-
-Internal refactoring of policy and trace handling.
+Codebase reduced to ~700 LOC. API surface simplified.
 
 ---
 

@@ -1,136 +1,86 @@
-"""
-Controlled AI Execution Layer (CAEL).
+# cael.py
 
-Bridges Psi + Kernel with policy evaluation and optional context handling.
-"""
+from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Generic, List, Mapping, Optional, Sequence, Tuple, TypeVar
 
-from .kernel import Kernel, ExecutionTrace
 from .psi import PsiDefinition
-from .psi_envelope import PsiEnvelope
-from .execution_context import ExecutionContext
-from .policy import PolicyEngine, DefaultSafePolicyEngine, PolicyDecision
+from .kernel import Kernel, ExecutionTrace
+
+T = TypeVar("T")
 
 
-class PolicyViolationError(Exception):
+@dataclass(frozen=True)
+class CaelResult(Generic[T]):
     """
-    Raised when a policy engine denies execution of a PsiDefinition.
-    """
+    Aggregated result of a CAEL pipeline.
 
-    def __init__(self, policy_name: str, reason: str) -> None:
-        super().__init__(f"{policy_name}: {reason}")
-        self.policy_name = policy_name
-        self.reason = reason
-
-
-@dataclass
-class CAELConfig:
-    """
-    Configuration for CAEL.
-
-    Currently:
-      - policy_engine: strategy for policy evaluation
-      - envelope_version: version string for new PsiEnvelope instances
+    Contract:
+    - traces: ordered list of ExecutionTrace objects (one per step)
+    - success: False if any step fails
+    - final_output: output of the last successful step or None
     """
 
-    policy_engine: PolicyEngine = DefaultSafePolicyEngine()
-    envelope_version: str = "1.0"
+    traces: List[ExecutionTrace[Any]]
+    final_output: Optional[T]
+    success: bool
 
 
 class CAEL:
     """
-    Controlled execution entry point.
+    Composable Atomic Execution Layer.
 
     Responsibilities:
-      - evaluate policies before execution
-      - construct / reuse PsiEnvelope
-      - delegate to Kernel
-      - apply simple timeout classification based on ExecutionContext.policy
+    - execute a sequence of steps via a single Kernel instance
+    - each step is defined as (psi, task, kwargs)
+    - no governance, routing or retry logic
     """
 
-    def __init__(
+    def __init__(self, kernel: Kernel) -> None:
+        self._kernel = kernel
+
+    def run(
         self,
-        config: Optional[CAELConfig] = None,
-        kernel: Optional[Kernel] = None,
-    ) -> None:
-        self.config = config or CAELConfig()
-        self.kernel = kernel or Kernel()
-
-    def execute(
-        self,
-        psi: PsiDefinition,
-        task: Callable[..., Any],
-        ctx: Optional[ExecutionContext] = None,
-        envelope: Optional[PsiEnvelope] = None,
-        **kwargs: Any,
-    ) -> ExecutionTrace:
+        steps: Sequence[
+            Tuple[
+                PsiDefinition,
+                Callable[..., Any],
+                Mapping[str, Any],  # kwargs for the task
+            ]
+        ],
+        metadata: Optional[Mapping[str, Any]] = None,
+    ) -> CaelResult[Any]:
         """
-        Execute a task under the KL model.
+        Execute all steps in order using the kernel.
 
-        Steps:
-          1. Policy evaluation (may raise PolicyViolationError)
-          2. Envelope construction (if not provided)
-          3. Kernel execution
-          4. Attach policy decision to trace
-          5. Classify timeouts based on ExecutionContext.policy.timeout_seconds
+        Each step:
+        - uses its PsiDefinition
+        - calls task(**kwargs)
+        - generates an ExecutionTrace through Kernel.execute
         """
+        traces: List[ExecutionTrace[Any]] = []
+        last_output: Any = None
+        pipeline_success = True
 
-        # 1. Policy evaluation
-        decision: Optional[PolicyDecision] = None
-        if self.config.policy_engine is not None:
-            decision = self.config.policy_engine.evaluate(psi)
-            if not decision.allowed:
-                raise PolicyViolationError(
-                    decision.policy_name,
-                    decision.reason or "policy denied execution",
-                )
-
-        # 2. Envelope construction
-        env = envelope or PsiEnvelope(
-            psi=psi,
-            version=self.config.envelope_version,
-        )
-
-        # 3. Kernel execution (no policy kwargs forwarded to task)
-        trace = self.kernel.execute(
-            psi=psi,
-            task=task,
-            envelope=env,
-            **kwargs,
-        )
-
-        # 4. Attach policy decision to trace (if available)
-        if decision is not None:
-            trace.policy_decisions.append(
-                {
-                    "policy_name": decision.policy_name,
-                    "allowed": decision.allowed,
-                    "reason": decision.reason,
-                }
+        for psi, task, kwargs in steps:
+            trace = self._kernel.execute(
+                psi=psi,
+                task=task,
+                metadata=metadata,
+                **dict(kwargs),
             )
-            # Set policy result summary for easier audit/logging
-            trace.policy_result = "allow" if decision.allowed else "block"
+            traces.append(trace)
 
-        # 5. Timeout classification (post-hoc, based on measured runtime)
-        timeout_seconds: Optional[float] = None
-        if ctx is not None and ctx.policy is not None:
-            timeout_seconds = ctx.policy.timeout_seconds
+            if not trace.success:
+                pipeline_success = False
+                last_output = None
+                break
 
-        if (
-            timeout_seconds is not None
-            and trace.runtime_ms is not None
-            and trace.runtime_ms > timeout_seconds * 1000.0
-        ):
-            timeout_message = (
-                f"TimeoutError: execution exceeded {timeout_seconds} seconds"
-            )
-            if trace.error:
-                trace.error = f"{timeout_message}; original error: {trace.error}"
-            else:
-                trace.error = timeout_message
-            trace.success = False
-            trace.policy_result = "timeout"  # Mark as timeout violation
+            last_output = trace.output
 
-        return trace
+        return CaelResult(
+            traces=traces,
+            final_output=last_output,
+            success=pipeline_success,
+        )

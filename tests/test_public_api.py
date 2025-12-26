@@ -9,6 +9,7 @@ from kl_kernel_logic import (
     CAEL,
     ExecutionTrace,
     CaelResult,
+    FailureCode,
 )
 
 
@@ -58,6 +59,8 @@ def test_execution_trace_fields() -> None:
     assert hasattr(trace, "output")
     assert hasattr(trace, "error")
     assert hasattr(trace, "metadata")
+    assert hasattr(trace, "failure_code")
+    assert hasattr(trace, "kernel_meta")
 
 
 def test_cael_result_fields() -> None:
@@ -69,4 +72,6 @@ def test_cael_result_fields() -> None:
     assert hasattr(result, "traces")
     assert hasattr(result, "final_output")
     assert hasattr(result, "success")
+    assert hasattr(result, "failure_code")
+    assert hasattr(result, "failure_message")
 

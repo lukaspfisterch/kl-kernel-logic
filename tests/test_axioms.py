@@ -13,6 +13,7 @@ from kl_kernel_logic import (
     Kernel,
     ExecutionTrace,
     CAEL,
+    FailureCode,
 )
 
 
@@ -34,6 +35,7 @@ def test_delta_produces_trace_on_success() -> None:
     assert trace.success is True
     assert trace.output == 42
     assert trace.error is None
+    assert trace.failure_code is FailureCode.OK
     assert trace.psi == psi
 
 
@@ -51,6 +53,7 @@ def test_delta_produces_trace_on_failure_never_raises() -> None:
     assert trace.success is False
     assert trace.output is None
     assert trace.error is not None
+    assert trace.failure_code is FailureCode.TASK_EXCEPTION
     assert "ValueError" in trace.exception_repr
     assert trace.psi == psi
 
@@ -212,8 +215,10 @@ def test_trace_contains_complete_state() -> None:
     assert trace.success is True
     assert trace.output == 42
     assert trace.error is None
+    assert trace.failure_code is FailureCode.OK
     assert trace.exception_type is None
     assert trace.exception_repr is None
+    assert trace.failure_code is FailureCode.OK
     assert isinstance(trace.metadata, dict) or hasattr(trace.metadata, "items")
 
 

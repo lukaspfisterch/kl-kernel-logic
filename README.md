@@ -1,4 +1,5 @@
 # KL Kernel Logic
+Version: **0.5.0**
 
 A small deterministic execution model core.
 
@@ -16,18 +17,37 @@ It does not handle orchestration, governance, or policy. Those belong to higher 
 
 ---
 
-## Version 0.4.0
+## Status
 
-Version 0.4.0 represents a radical simplification of the core. The codebase has been reduced in three stages:
+KL Kernel Logic v0.5.0 is a hardened, contract-stable kernel aligned with
+KL Execution Theory v0.1.0.
 
-- From approximately 2000 lines of code
-- To approximately 700 lines of core code
-- To the current **244 LOC** minimal core (psi.py, kernel.py, cael.py)
+This version defines and enforces:
+- deterministic execution scope
+- normalized failure taxonomy
+- immutable, canonical execution traces
+- stable trace digests suitable for downstream derivation (DBL)
 
-This reduction reflects a move toward an axiomatic, minimal, stable substrate. The core now contains only what is necessary for the deterministic execution model and tracing.
+The kernel is considered **frozen** unless the theory contract is reopened.
 
-**KL Kernel Logic 0.4.0 is a minimal, stable core.**  
-The public API in `__init__.py` and the behaviour covered by the tests are considered frozen.
+---
+
+## Kernel Contract
+
+The normative kernel contract is defined here:
+
+- [`docs/kernel_contract.md`](docs/kernel_contract.md)
+
+All behavior, determinism guarantees, and failure semantics are governed
+exclusively by this contract.
+
+---
+
+## Determinism
+
+Determinism applies to the declared deterministic trace core only.
+Observational fields (e.g. wall-clock timestamps, run_id, exception text)
+are explicitly excluded and MUST NOT be used for derivation or control flow.
 
 ---
 
@@ -90,6 +110,8 @@ Fields:
 Time carries two layers: observational wall-clock time (UTC timestamps) and monotonic duration (runtime_ms). runtime_ms provides a monotonic measure suitable for ordering and duration, independent of wall-clock adjustments.
 
 The core never mutates traces after creation.
+
+Operational projection note: any `kernel_meta` fields (if added in the future) are implementation-level observables and are not part of KL Execution Theory. They must not be treated as axiomatic state or used to redefine behavior semantics.
 
 ### CAEL
 

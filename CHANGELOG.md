@@ -6,6 +6,19 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ---
 
+## [0.5.0]
+
+- Introduced normative kernel contract (RFC-style MUST/MAY)
+- Formalized determinism scope and observational fields
+- Normalized kernel failure taxonomy
+- Enforced immutable, canonical execution traces
+- Added trace digest suitable for downstream derivation
+- Hardened CAEL validation and failure propagation
+
+This is the first contract-stable kernel release.
+
+---
+
 ## [0.4.0] – 2025-12-03
 
 **Status:** Minimal, stable, frozen core.

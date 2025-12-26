@@ -14,6 +14,7 @@ def test_cael_run_single_step():
     assert result.success is True
     assert result.final_output == 10
     assert len(result.traces) == 1
+    assert result.failure_code is None
 
 
 def test_cael_run_multiple_steps():
@@ -29,6 +30,7 @@ def test_cael_run_multiple_steps():
     assert result.success is True
     assert result.final_output == 12
     assert len(result.traces) == 2
+    assert result.failure_code is None
 
 
 def test_cael_stops_on_failure():
@@ -49,4 +51,18 @@ def test_cael_stops_on_failure():
     assert result.success is False
     assert result.final_output is None
     assert len(result.traces) == 2  # third step not executed
+    assert result.failure_code == "TASK_EXCEPTION"
 
+
+def test_cael_validates_steps_before_execution():
+    psi = PsiDefinition(psi_type="test", name="ok")
+    cael = CAEL(kernel=Kernel())
+
+    result = cael.run([
+        (psi, "not-callable", {}),  # invalid task
+    ])
+
+    assert result.success is False
+    assert result.final_output is None
+    assert result.failure_code == "INVALID_STEP"
+    assert result.traces == []

@@ -1,5 +1,12 @@
 # Python
 __pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
 
 
 # Virtual environments
@@ -23,6 +30,7 @@ ai/
 build/
 dist/
 *.egg-info/
+pip-wheel-metadata/
 
 # Local runtime artifacts
 logs/
@@ -36,6 +44,12 @@ logs/
 
 # Testing
 .pytest_cache/
+.tox/
+.nox/
+
+# Environment
+.env
+.env.*
 
 # OS
 .DS_Store

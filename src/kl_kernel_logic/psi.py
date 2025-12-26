@@ -23,8 +23,11 @@ class PsiDefinition:
 
     def describe(self) -> Dict[str, Any]:
         """Stable serializable view."""
+        items: Dict[str, Any] = {}
+        for key in sorted(self.metadata.keys(), key=lambda k: str(k)):
+            items[str(key)] = self.metadata[key]
         return {
             "psi_type": self.psi_type,
             "name": self.name,
-            "metadata": dict(self.metadata),
+            "metadata": items,
         }

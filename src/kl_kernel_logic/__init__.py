@@ -1,7 +1,6 @@
 # KL Kernel Logic
 #
 # A small deterministic execution core.
-# 244 LOC minimal substrate.
 
 from .psi import PsiDefinition
 from .kernel import Kernel, ExecutionTrace, FailureCode

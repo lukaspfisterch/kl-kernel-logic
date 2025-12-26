@@ -84,8 +84,10 @@ Semantics:
 - `task` is called exactly once with `**kwargs`
 - `success` is `True` if and only if no exception is raised by `task`
 - `output` contains the return value on success, `None` on failure
-- `runtime_ms` is measured via a monotonic perf counter, always non-negative
-- `run_id` is unique per execution
+- `runtime_ms` is measured via a monotonic perf counter (observational)
+- in deterministic mode, `runtime_ms` is forced to 0.0
+- `run_id` is unique per execution (observational)
+- in deterministic mode, `run_id` is provided by deterministic providers and may be stable
 
 The Kernel never interprets metadata, never makes policy decisions, and never retries. Kernel implements Δ as atomicity of execution and observation, not as state change. State belongs to user logic.
 
@@ -102,16 +104,20 @@ Fields:
 - `error`: exception message (or `None` on success)
 - `exception_type`: exception class name (or `None`)
 - `exception_repr`: repr of exception (or `None`)
+- `failure_code`: normalized kernel-level failure code
 - `started_at`: UTC datetime when execution started (wall clock)
 - `finished_at`: UTC datetime when execution finished (wall clock)
-- `runtime_ms`: elapsed time in milliseconds (monotonic perf counter)
+- `runtime_ms`: elapsed time in milliseconds (monotonic perf counter, observational)
 - `metadata`: the metadata dict passed to `Kernel.execute()`, not from PsiDefinition
+- `kernel_meta`: frozen kernel-level observational metadata
 
-Time carries two layers: observational wall-clock time (UTC timestamps) and monotonic duration (runtime_ms). runtime_ms provides a monotonic measure suitable for ordering and duration, independent of wall-clock adjustments.
+Time carries two layers: observational wall-clock time (UTC timestamps) and monotonic duration (runtime_ms). runtime_ms is suitable for per-step duration measurement, and ordering is established by CAEL step index, not by temporal fields.
 
 The core never mutates traces after creation.
 
-Operational projection note: any `kernel_meta` fields (if added in the future) are implementation-level observables and are not part of KL Execution Theory. They must not be treated as axiomatic state or used to redefine behavior semantics.
+Fields marked as observational MUST NOT be used for ordering or semantic derivation.
+
+Operational projection note: `kernel_meta` (if present) is an implementation-level observable and is not part of KL Execution Theory. It must not be treated as axiomatic state or used to redefine behavior semantics.
 
 ### CAEL
 
@@ -124,6 +130,8 @@ Semantics:
 - `CaelResult.success` is `True` if and only if all steps succeeded
 - `CaelResult.final_output` is the output of the last successful step, or `None` if the first step fails
 - `CaelResult.traces` is the ordered list of `ExecutionTrace` objects (only executed steps)
+- `CaelResult.failure_code` indicates the failure reason when execution stops
+- `CaelResult.failure_message` carries the associated observational error message
 
 CAEL does not pass output from one step to the next. Each step receives its own independent `kwargs`. It does not include retry logic, routing, or governance. CAEL establishes a total order over execution steps, independent of temporal measurements.
 

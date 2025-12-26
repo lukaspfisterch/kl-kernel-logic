@@ -6,7 +6,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/) and [Semant
 
 ---
 
-## [0.5.0]
+## [0.5.0] - 2025-12-26
 
 - Introduced normative kernel contract (RFC-style MUST/MAY)
 - Formalized determinism scope and observational fields

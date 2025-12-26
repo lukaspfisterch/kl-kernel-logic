@@ -204,6 +204,7 @@ class Kernel:
         if not isinstance(psi, PsiDefinition):
             kernel_error = "InvalidInput: psi must be PsiDefinition"
             invalid_input = True
+            psi = PsiDefinition(psi_type="invalid", name="invalid", metadata={})
         if not callable(task):
             kernel_error = "InvalidInput: task must be callable"
             invalid_input = True
@@ -236,6 +237,8 @@ class Kernel:
         kernel_error = kernel_error or err
 
         runtime_ms = max((end - start) * 1000.0, 0.0)
+        if self._deterministic_mode:
+            runtime_ms = 0.0
         run_id, err = self._safe_run_id(kernel_error)
         kernel_error = kernel_error or err
 
@@ -245,7 +248,7 @@ class Kernel:
             error = kernel_error
             exc_type = "KernelError"
             exc_repr = kernel_error
-            failure_code = FailureCode.INVALID_INPUT if "InvalidInput" in kernel_error else FailureCode.KERNEL_ERROR
+            failure_code = FailureCode.INVALID_INPUT if invalid_input else FailureCode.KERNEL_ERROR
 
         trace_metadata: dict[str, Any] = dict(metadata) if metadata is not None else {}
         frozen_metadata = _freeze_value(trace_metadata)

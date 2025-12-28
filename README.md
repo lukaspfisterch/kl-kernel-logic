@@ -223,8 +223,3 @@ This kernel was originally aligned with KL Execution Theory. That theory remains
 
 - https://github.com/lukaspfisterch/kl-execution-theory
 
----
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.

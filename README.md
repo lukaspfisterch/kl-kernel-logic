@@ -19,8 +19,10 @@ It does not handle orchestration, governance, or policy. Those belong to higher 
 
 ## Status
 
-KL Kernel Logic v0.5.0 is a hardened, contract-stable kernel aligned with
-KL Execution Theory v0.1.0.
+KL Kernel Logic v0.5.0 is a hardened, contract-stable kernel.
+
+It is a concrete, stateless execution substrate derived from earlier KL Execution Theory work and compatible with the newer authoritative foundation defined in:
+https://github.com/lukaspfisterch/execution-without-normativity
 
 This version defines and enforces:
 - deterministic execution scope
@@ -89,7 +91,7 @@ Semantics:
 - `run_id` is unique per execution (observational)
 - in deterministic mode, `run_id` is provided by deterministic providers and may be stable
 
-The Kernel never interprets metadata, never makes policy decisions, and never retries. Kernel implements Δ as atomicity of execution and observation, not as state change. State belongs to user logic.
+The Kernel never interprets metadata, never makes policy decisions, and never retries. Kernel implements ? as atomicity of execution and observation, not as state change. State belongs to user logic.
 
 ### ExecutionTrace
 
@@ -142,67 +144,84 @@ CAEL does not pass output from one step to the next. Each step receives its own 
 ### Basic Kernel Execution
 
 ```python
-from kl_kernel_logic import PsiDefinition, Kernel
+from kl_kernel_logic import Kernel, PsiDefinition
 
-def uppercase(text: str) -> str:
-    return text.upper()
+psi = PsiDefinition(
+    psi_type="llm.call",
+    name="example",
+    metadata={"model": "dummy"},
+)
 
-psi = PsiDefinition(psi_type="text", name="uppercase")
+def task(prompt: str):
+    return prompt.upper()
+
 kernel = Kernel()
+trace = kernel.execute(psi=psi, task=task, prompt="hello")
 
-trace = kernel.execute(psi=psi, task=uppercase, text="hello")
-
-print(trace.success)   # True
-print(trace.output)    # "HELLO"
+print(trace.success)  # True
+print(trace.output)   # "HELLO"
 ```
 
 ### CAEL with Independent Steps
 
 ```python
-from kl_kernel_logic import PsiDefinition, Kernel, CAEL
+from kl_kernel_logic import Kernel, PsiDefinition
+from kl_kernel_logic.cael import CAEL, CaelStep
 
-def step_a() -> int:
-    return 10
+kernel = Kernel()
+cael = CAEL(kernel=kernel)
 
-def step_b() -> int:
-    return 20
+steps = [
+    CaelStep(
+        psi=PsiDefinition(psi_type="task", name="step-1"),
+        task=lambda x: x + 1,
+        kwargs={"x": 1},
+    ),
+    CaelStep(
+        psi=PsiDefinition(psi_type="task", name="step-2"),
+        task=lambda x: x * 10,
+        kwargs={"x": 2},
+    ),
+]
 
-psi_a = PsiDefinition(psi_type="math", name="first")
-psi_b = PsiDefinition(psi_type="math", name="second")
+result = cael.run(steps)
 
-cael = CAEL(kernel=Kernel())
-
-result = cael.run([
-    (psi_a, step_a, {}),
-    (psi_b, step_b, {}),
-])
-
-print(result.success)       # True
-print(result.final_output)  # 20
-print(len(result.traces))   # 2
+print(result.success)
+print(len(result.traces))
 ```
 
 ---
 
 ## Scope and Non-Goals
 
-This package does not handle:
+KL Kernel Logic deliberately does not define:
 
-- Policy enforcement
-- Governance or access control
-- Rate limiting or quotas
-- Domain-specific logic
-- Retry or fallback strategies
+- policy or governance logic (G)
+- boundary logic (L)
+- orchestration beyond CAEL
+- persistence, storage, or network transport
+- concurrency or parallelism models
+- execution retries or compensation
+- model selection or routing
 
-KL Kernel Logic is a small deterministic substrate. Higher layers (gateways, governance layers, orchestrators) build on top of it.
+---
+
+## Conceptual Lineage
+
+- Execution Without Normativity is the authoritative axiomatic foundation.  
+  https://github.com/lukaspfisterch/execution-without-normativity
+- KL Execution Theory is a historical transitional reference for KL concepts.  
+  https://github.com/lukaspfisterch/kl-execution-theory
+- KL Kernel Logic is a concrete, stateless execution kernel derived from that lineage.
+- Higher layers such as DBL, governance, and domain runners build on top.
 
 ---
 
 ## KL Execution Theory
 
-KL Kernel Logic implements Δ (atomic transitions) and V (behaviour sequences) in their stateless form, and provides observable projections of t (logical order and duration). State transitions belong to higher layers or to user logic. G (governance) and L (boundaries) live in higher layers such as gateways or governance systems.
+This kernel was originally aligned with KL Execution Theory. That theory remains a historical and transitional reference for KL concepts, but it has been superseded as the canonical axiomatic foundation by Execution Without Normativity.
 
-→ [KL Execution Theory](https://github.com/lukaspfisterch/kl-execution-theory)
+- https://github.com/lukaspfisterch/kl-execution-theory
 
 ---
 

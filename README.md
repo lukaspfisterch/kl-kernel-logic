@@ -11,6 +11,7 @@ KL Kernel Logic provides three components:
 
 It does not handle orchestration, governance, or policy. Those belong to higher layers.
 
+[![Tests](https://github.com/lukaspfisterch/kl-kernel-logic/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/lukaspfisterch/kl-kernel-logic/actions/workflows/tests.yml)
 [![PyPI version](https://img.shields.io/pypi/v/kl-kernel-logic.svg)](https://pypi.org/project/kl-kernel-logic/)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)

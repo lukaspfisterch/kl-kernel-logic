@@ -1,6 +1,6 @@
-# Contract Test Matrix (KL Execution Theory -> KL Kernel Logic)
+# Contract Test Matrix
 
-This matrix defines executable Given/When/Then tests derived from KL Execution Theory failure modes and axiom minimal contracts. It is the source of truth for pytest contract tests in kl-kernel-logic v0.5.0 and intentionally stays minimal and deterministic.
+This matrix defines executable Given/When/Then tests derived from foundational execution axioms and failure modes. It is the source of truth for pytest contract tests in kl-kernel-logic v0.5.0 and intentionally stays minimal and deterministic.
 
 ## Table of Contents
 - Failure Modes Index
@@ -34,7 +34,6 @@ The theory-based tests cover only axioms and derivations from V. `kernel_meta` i
   - No output field depends on external time or randomness.
 - Notes:
   - Compare only deterministic fields; ignore timestamps if present.
-Links: [Axiom 1: Delta](D:/DEV/projects/kl-execution-theory/axioms/01_delta.md)
 
 ### TM-002 (FM-2, A2-Behavior)
 - Intent: Ensure behaviour V is complete and contains every executed Delta exactly once.
@@ -46,7 +45,6 @@ Links: [Axiom 1: Delta](D:/DEV/projects/kl-execution-theory/axioms/01_delta.md)
 - Then:
   - len(V) == N.
   - Each execution produces exactly one entry in V, and no entry is missing or duplicated.
-Links: [Axiom 2: Behavior](D:/DEV/projects/kl-execution-theory/axioms/02_behavior.md)
 
 ### TM-003 (FM-4, A2-Behavior)
 - Intent: Verify deterministic replay of behaviour and trace equivalence.
@@ -60,7 +58,6 @@ Links: [Axiom 2: Behavior](D:/DEV/projects/kl-execution-theory/axioms/02_behavio
   - Trace structure matches (same Delta sequence and state transitions).
 - Notes:
   - Ignore t_wall and t_perf fields; compare logical ordering only.
-Links: [Axiom 2: Behavior](D:/DEV/projects/kl-execution-theory/axioms/02_behavior.md), [Execution Semantics](D:/DEV/projects/kl-execution-theory/formal/execution_semantics.md)
 
 ### TM-004 (FM-3, A3-Time)
 - Intent: Ensure logical time is derived from behaviour order.
@@ -71,7 +68,6 @@ Links: [Axiom 2: Behavior](D:/DEV/projects/kl-execution-theory/axioms/02_behavio
 - Then:
   - t_index values are [0, 1, 2] and map to the corresponding Deltas.
   - Ordering is preserved even if wall clock timestamps are equal.
-Links: [Axiom 3: Time](D:/DEV/projects/kl-execution-theory/axioms/03_time.md), [Execution Semantics](D:/DEV/projects/kl-execution-theory/formal/execution_semantics.md)
 
 ### TM-005 (FM-7, A3-Time)
 - Intent: Prevent use of observational time as semantic ordering.
@@ -82,7 +78,6 @@ Links: [Axiom 3: Time](D:/DEV/projects/kl-execution-theory/axioms/03_time.md), [
   - Derive ordering for any evaluation or replay.
 - Then:
   - Ordering follows t_index from V (A before B), not t_wall or t_perf.
-Links: [Axiom 3: Time](D:/DEV/projects/kl-execution-theory/axioms/03_time.md), [Execution Semantics](D:/DEV/projects/kl-execution-theory/formal/execution_semantics.md)
 
 ### TM-006 (FM-5, A4-Governance)
 - Intent: Ensure governance decisions are derived only from behaviour V.
@@ -93,7 +88,6 @@ Links: [Axiom 3: Time](D:/DEV/projects/kl-execution-theory/axioms/03_time.md), [
   - Evaluate G(V) before and after the external variable changes.
 - Then:
   - Governance decision D is identical for both evaluations.
-Links: [Axiom 4: Governance](D:/DEV/projects/kl-execution-theory/axioms/04_governance.md)
 
 ### TM-007 (FM-8, A4-Governance)
 - Intent: Ensure governance evaluation is non-executing and pure.
@@ -104,7 +98,6 @@ Links: [Axiom 4: Governance](D:/DEV/projects/kl-execution-theory/axioms/04_gover
 - Then:
   - V is unchanged (length and contents identical).
   - No additional Kernel executions occur during evaluation.
-Links: [Axiom 4: Governance](D:/DEV/projects/kl-execution-theory/axioms/04_governance.md)
 
 ### TM-008 (FM-6, A5-Boundaries)
 - Intent: Ensure boundary derivation is deterministic and behaviour-derived.
@@ -115,7 +108,6 @@ Links: [Axiom 4: Governance](D:/DEV/projects/kl-execution-theory/axioms/04_gover
   - Evaluate L(V) before and after the external variable changes.
 - Then:
   - Boundary representation B is identical for both evaluations.
-Links: [Axiom 5: Boundaries](D:/DEV/projects/kl-execution-theory/axioms/05_boundaries.md)
 
 ### TM-009 (FM-8, A5-Boundaries)
 - Intent: Ensure boundary evaluation is non-executing and pure.
@@ -126,4 +118,3 @@ Links: [Axiom 5: Boundaries](D:/DEV/projects/kl-execution-theory/axioms/05_bound
 - Then:
   - V is unchanged (length and contents identical).
   - No additional Kernel executions occur during evaluation.
-Links: [Axiom 5: Boundaries](D:/DEV/projects/kl-execution-theory/axioms/05_boundaries.md)

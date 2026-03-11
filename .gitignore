@@ -63,3 +63,6 @@ keys.txt
 *.Backup
 *.bak
 *.old
+
+# Inventory
+inventory*.md

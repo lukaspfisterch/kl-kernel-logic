@@ -21,7 +21,7 @@ It does not handle orchestration, governance, or policy. Those belong to higher 
 
 KL Kernel Logic v0.5.0 is a hardened, contract-stable kernel.
 
-It is a concrete, stateless execution substrate derived from earlier KL Execution Theory work and compatible with the newer authoritative foundation defined in:
+It is a concrete, stateless execution substrate aligned with the authoritative foundation defined in:
 https://github.com/lukaspfisterch/execution-without-normativity
 
 This version defines and enforces:
@@ -36,7 +36,7 @@ The kernel is considered **frozen** unless the theory contract is reopened.
 
 ## Kernel Contract
 
-The normative kernel contract is defined here:
+The authoritative kernel contract is defined here:
 
 - [`docs/kernel_contract.md`](docs/kernel_contract.md)
 
@@ -119,7 +119,7 @@ The core never mutates traces after creation.
 
 Fields marked as observational MUST NOT be used for ordering or semantic derivation.
 
-Operational projection note: `kernel_meta` (if present) is an implementation-level observable and is not part of KL Execution Theory. It must not be treated as axiomatic state or used to redefine behavior semantics.
+Operational projection note: `kernel_meta` (if present) is an implementation-level observable. It must not be treated as axiomatic state or used to redefine behavior semantics.
 
 ### CAEL
 
@@ -210,16 +210,5 @@ KL Kernel Logic deliberately does not define:
 
 - Execution Without Normativity is the authoritative axiomatic foundation.  
   https://github.com/lukaspfisterch/execution-without-normativity
-- KL Execution Theory is a historical transitional reference for KL concepts.  
-  https://github.com/lukaspfisterch/kl-execution-theory
-- KL Kernel Logic is a concrete, stateless execution kernel derived from that lineage.
+- KL Kernel Logic is a concrete, stateless execution kernel derived from that foundation.
 - Higher layers such as DBL, governance, and domain runners build on top.
-
----
-
-## KL Execution Theory
-
-This kernel was originally aligned with KL Execution Theory. That theory remains a historical and transitional reference for KL concepts, but it has been superseded as the canonical axiomatic foundation by Execution Without Normativity.
-
-- https://github.com/lukaspfisterch/kl-execution-theory
-
